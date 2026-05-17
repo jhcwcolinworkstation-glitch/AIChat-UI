@@ -74,16 +74,16 @@ project-root/
 ├── logo.png            # 项目 logo（用于 README）
 ├── README.md           # 项目说明
 ├── 1.JPG ~ 6.JPG       # 背景图片素材（可在设置中选择）
-│
-└── (CDN 库文件)
-    ├── tailwindcss.js
-    ├── lucide.js
-    ├── marked.js
-    ├── katex.min.js / katex.min.css
-    ├── highlight.js / github-dark.min.css
-    ├── mammoth.min.js
-    ├── pptxtojson.js
-    └── xlsx.min.js
+├── tailwindcss.js
+├── lucide.js
+├── marked.js
+├── katex.min.js
+├── katex.min.css
+├── highlight.js
+├── github-dark.min.css
+├── mammoth.min.js
+├── pptxtojson.js
+└── xlsx.min.js
 ```
 
 ---
@@ -137,7 +137,7 @@ project-root/
 
 ## 👤 作者 & 版本
 
-- **开发者**：JHCWColin / abpdf  
+- **开发者**：[JHCWColin](https://github.com/JHCWColin) / [abpdf](https://github.com/abpdf)  
 - **版本**：V1.30 (build20260517)
 
 ---
