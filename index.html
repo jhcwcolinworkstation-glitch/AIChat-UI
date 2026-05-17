@@ -9,19 +9,18 @@
     </script>
     <script src="lucide.js">
     </script>
-    <!-- Marked.js -->
     <script src="marked.js">
     </script>
-    <!-- KaTeX for Math Expressions -->
     <link rel="stylesheet" href="katex.min.css">
     <script src="katex.min.js">
     </script>
-    <!-- Highlight.js (深色代码块) -->
     <link rel="stylesheet" href="github-dark.min.css">
     <script src="highlight.js">
     </script>
-    <!-- JSZip for .docx/.pptx/.xlsx parsing -->
-    <script src="jszip.min.js">
+    <script src="mammoth.min.js">
+    </script>
+    <script src="pptxtojson.js"></script>
+    <script src="xlsx.min.js">
     </script>
     <style>
         /* ========== 基础重置 & 液态玻璃 (调整图片亮度/透明度) ========== */
@@ -740,88 +739,219 @@
             }
         }
 
-        /* ========== 附件预览区样式 ========== */
+        /* ========== 附件预览区样式（移除容器玻璃效果） ========== */
         #attachments-preview {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
-            padding: 0.5rem 0;
+            gap: 0.6rem;
+            padding: 0.6rem 0.75rem;
             min-height: 0;
             transition: all 0.3s ease;
+            /* 以下属性已移除玻璃效果 */
+            background: transparent;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            margin-bottom: 0.5rem;
         }
 
         #attachments-preview:empty {
             display: none;
         }
 
+        body.theme-light #attachments-preview {
+            background: transparent;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: none;
+            box-shadow: none;
+        }
+
+        /* ========== 附件卡片 - 液态玻璃效果 ========== */
         .attachment-card {
             position: relative;
             display: inline-flex;
             flex-direction: column;
             align-items: center;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 0.75rem;
-            padding: 0.4rem;
-            gap: 0.25rem;
-            transition: all 0.2s;
-            max-width: 100px;
+            /* 深色模式液态玻璃 */
+            background: linear-gradient(145deg,
+                    rgba(55, 58, 68, 0.7) 0%,
+                    rgba(40, 43, 52, 0.65) 40%,
+                    rgba(32, 35, 44, 0.7) 100%);
+            backdrop-filter: blur(16px) saturate(170%);
+            -webkit-backdrop-filter: blur(16px) saturate(170%);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 0.85rem;
+            padding: 0.45rem;
+            gap: 0.3rem;
+            transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+            max-width: 105px;
+            box-shadow:
+                0 6px 20px rgba(0, 0, 0, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                inset 0 -2px 0 rgba(0, 0, 0, 0.06);
+            /* 微妙的顶部高光模拟玻璃折射 */
+            overflow: visible;
         }
 
+        /* 附件卡片顶部光泽条纹 */
+        .attachment-card::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 10%;
+            right: 10%;
+            height: 1px;
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.25) 30%,
+                    rgba(255, 255, 255, 0.4) 50%,
+                    rgba(255, 255, 255, 0.25) 70%,
+                    transparent 100%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 2;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+
+        .attachment-card:hover::before {
+            opacity: 1;
+        }
+
+        /* 浅色模式附件卡片 */
         body.theme-light .attachment-card {
-            background: rgba(0, 0, 0, 0.08);
-            border-color: rgba(0, 0, 0, 0.18);
+            background: linear-gradient(145deg,
+                    rgba(255, 255, 255, 0.78) 0%,
+                    rgba(248, 249, 252, 0.68) 40%,
+                    rgba(240, 242, 248, 0.75) 100%);
+            backdrop-filter: blur(16px) saturate(170%);
+            -webkit-backdrop-filter: blur(16px) saturate(170%);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow:
+                0 6px 20px rgba(0, 0, 0, 0.07),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                inset 0 -2px 0 rgba(0, 0, 0, 0.03);
         }
 
+        body.theme-light .attachment-card::before {
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.5) 30%,
+                    rgba(255, 255, 255, 0.75) 50%,
+                    rgba(255, 255, 255, 0.5) 70%,
+                    transparent 100%);
+            opacity: 0.6;
+        }
+
+        body.theme-light .attachment-card:hover::before {
+            opacity: 0.9;
+        }
+
+        /* 附件卡片悬停效果 */
         .attachment-card:hover {
-            border-color: #10b981;
+            border-color: rgba(16, 185, 129, 0.7);
+            box-shadow:
+                0 10px 28px rgba(0, 0, 0, 0.3),
+                0 0 0 2px rgba(16, 185, 129, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                inset 0 -2px 0 rgba(0, 0, 0, 0.04);
+            transform: translateY(-2px);
         }
 
+        body.theme-light .attachment-card:hover {
+            border-color: rgba(16, 185, 129, 0.6);
+            box-shadow:
+                0 10px 28px rgba(0, 0, 0, 0.1),
+                0 0 0 2px rgba(16, 185, 129, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.7),
+                inset 0 -2px 0 rgba(0, 0, 0, 0.02);
+            transform: translateY(-2px);
+        }
+
+        /* 图片缩略图 */
         .attachment-thumb {
             width: 64px;
             height: 64px;
             object-fit: cover;
-            border-radius: 0.5rem;
+            border-radius: 0.55rem;
             cursor: pointer;
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.25);
+            border: 1.5px solid rgba(255, 255, 255, 0.18);
+            transition: all 0.25s ease;
+            position: relative;
+            z-index: 1;
         }
 
+        body.theme-light .attachment-thumb {
+            background: rgba(0, 0, 0, 0.06);
+            border: 1.5px solid rgba(0, 0, 0, 0.12);
+        }
+
+        .attachment-thumb:hover {
+            border-color: rgba(16, 185, 129, 0.55);
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+        }
+
+        /* 文件图标容器 */
         .attachment-file-icon {
             width: 64px;
             height: 64px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 0.5rem;
-            background: rgba(0, 0, 0, 0.2);
+            border-radius: 0.55rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            transition: all 0.25s ease;
+            position: relative;
+            z-index: 1;
         }
 
+        body.theme-light .attachment-file-icon {
+            background: rgba(0, 0, 0, 0.04);
+            border: 1.5px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .attachment-card:hover .attachment-file-icon {
+            border-color: rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.12);
+        }
+
+        /* 附件名称 */
         .attachment-name {
             font-size: 0.65rem;
-            color: #aaa;
-            max-width: 88px;
+            color: #b0b0b8;
+            max-width: 90px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             text-align: center;
+            position: relative;
+            z-index: 1;
+            font-weight: 500;
+            letter-spacing: 0.01em;
         }
 
         body.theme-light .attachment-name {
-            color: #555;
+            color: #4a4a52;
         }
 
+        /* 移除按钮 */
         .attachment-remove {
             position: absolute;
-            top: -6px;
-            right: -6px;
-            width: 20px;
-            height: 20px;
+            top: -7px;
+            right: -7px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
-            background: #ef4444;
+            background: linear-gradient(135deg, #f44 0%, #d33 100%);
             color: white;
-            border: none;
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -829,13 +959,21 @@
             font-size: 11px;
             line-height: 1;
             padding: 0;
-            transition: all 0.2s;
-            z-index: 5;
+            transition: all 0.22s ease;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        body.theme-light .attachment-remove {
+            border: 1.5px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
         .attachment-remove:hover {
-            background: #dc2626;
-            transform: scale(1.1);
+            background: linear-gradient(135deg, #f55 0%, #e22 100%);
+            transform: scale(1.15);
+            box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45);
+            border-color: rgba(255, 255, 255, 0.5);
         }
 
         /* 用户气泡中的附件样式 */
@@ -929,7 +1067,6 @@
 </head>
 
 <body class="h-screen flex overflow-hidden theme-light font-size-medium" onclick="closeRetryMenu(event)">
-
     <!-- 遮罩 & 侧边栏 -->
     <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
     <aside id="sidebar" class="sidebar h-full flex flex-col p-3 flex-shrink-0">
@@ -953,7 +1090,6 @@
             </button>
         </div>
     </aside>
-
     <!-- 主聊天区 -->
     <main class="flex-grow flex flex-col relative chat-container w-full min-w-0">
         <header class="p-3 flex items-center border-b border-gray-800 bg-[#212121] z-10">
@@ -964,10 +1100,8 @@
                 <span class="sync-dot"></span><span class="text-[10px] text-emerald-400 font-bold uppercase">同步中</span>
             </div>
         </header>
-
         <div id="messages-wrapper" class="flex-grow overflow-y-auto p-4 md:p-8 space-y-10 no-scrollbar scroll-smooth">
         </div>
-
         <!-- 重试浮层 -->
         <div id="retry-popover" class="hidden" onclick="event.stopPropagation()">
             <span class="text-[10px] text-gray-400 px-2 pt-1 font-bold uppercase tracking-wider">选择模型并重试</span>
@@ -980,18 +1114,15 @@
                 </button>
             </div>
         </div>
-
         <!-- 图片查看弹窗 -->
         <div id="image-lightbox" class="image-lightbox hidden" onclick="closeLightbox()">
             <img id="lightbox-img" src="" alt="查看大图">
         </div>
-
         <!-- 底部输入区 -->
         <footer id="input-footer" class="p-4 md:pb-8 w-full">
             <div class="max-w-4xl mx-auto relative flex flex-col items-start">
                 <!-- 附件预览区 -->
                 <div id="attachments-preview" class="w-full"></div>
-
                 <div class="model-selector-container">
                     <select id="model-select" onchange="syncRetrySelect()">
                         <option value="gpt-5.5-2026-04-24" selected>gpt-5.5-2026-04-24</option>
@@ -1259,7 +1390,7 @@
                         </p>
                         <p class="leading-relaxed">
                             <strong class="text-gray-300">版本</strong><br>
-                            <span id="app-version">V1.21B (build20260512C)</span>
+                            <span id="app-version">V1.30 (build20260517)</span>
                         </p>
                         <div class="bg-[#1a1a1a] rounded-xl p-3 border border-gray-700 license-box">
                             <p class="font-mono text-[10px] text-gray-500 mb-2">MIT License</p>
@@ -1274,8 +1405,8 @@
 
     <script>
         // ==================== 配置 (默认值) ====================
-        const DEFAULT_API_KEY = 'sk-2LXzp4RQCOAywuqu63EfE5D0480e46Bc9cEa8d1a5a38D117';
-        const DEFAULT_BASE_URL = 'https://api.vveai.com/v1';
+        const DEFAULT_API_KEY = 'sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';//请替换自己的
+        const DEFAULT_BASE_URL = 'https://api.vveai.com/v1';//请替换自己的
 
         function getAPIKey() {
             return localStorage.getItem('api_key') || DEFAULT_API_KEY;
@@ -1286,10 +1417,10 @@
         }
 
         const LC_CONFIG = {
-            id: 'G2jNexXDgQoJkiR5bf7aGqZj-gzGzoHsz',
-            key: 'GF9NbWWTBVfxwjkam40Wvx3R',
-            masterKey: 'tO6fRxnoCUEAJ3HyHbzmlG9R',
-            base: 'https://g2jnexxd.lc-cn-n1-shared.com/1.1/classes/AIChats'
+            id: 'G212345678901234567890',//请替换自己的
+            key: '1111111111111111111R',//请替换自己的
+            masterKey: 't1111111111111111R',//请替换自己的
+            base: 'https://g2j1111111111d.lc-1111111111red.com/1.1/classes/AIChats'//请替换自己的
         };
 
         let chats = JSON.parse(localStorage.getItem('ai_chats') || '[]');
@@ -1318,16 +1449,20 @@
             let blockHtml = element.innerHTML;
             blockHtml = blockHtml.replace(blockRegex, (match, math) => {
                 try {
-                    const rendered = window.katex.renderToString(math.trim(), { displayMode: true,
-                    throwOnError: false });
+                    const rendered = window.katex.renderToString(math.trim(), {
+                        displayMode: true,
+                        throwOnError: false
+                    });
                     return `<div class="katex-display">${rendered}</div>`;
                 } catch (e) { return match; }
             });
             const inlineRegex = /\$([^\$\n]+?)\$/g;
             blockHtml = blockHtml.replace(inlineRegex, (match, math) => {
                 try {
-                    const rendered = window.katex.renderToString(math.trim(), { displayMode: false,
-                    throwOnError: false });
+                    const rendered = window.katex.renderToString(math.trim(), {
+                        displayMode: false,
+                        throwOnError: false
+                    });
                     return `<span class="katex-inline">${rendered}</span>`;
                 } catch (e) { return match; }
             });
@@ -1381,12 +1516,12 @@
         }
 
         function escapeHtml(str) {
-            return str.replace(/[&<>]/g, function(m) {
+            return str.replace(/[&<>]/g, function (m) {
                 if (m === '&') return '&amp;';
                 if (m === '<') return '&lt;';
                 if (m === '>') return '&gt;';
                 return m;
-            }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) { return c; });
+            }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function (c) { return c; });
         }
 
         async function buildSystemMessageWithMemories() {
@@ -1459,150 +1594,76 @@
             updateAttachButtonState();
         }
 
-        // 解析 .docx 提取纯文本
+        // ---- 使用 Mammoth.js 解析 .docx ----
         async function extractTextFromDocx(file) {
-            if (typeof JSZip === 'undefined') {
-                throw new Error('JSZip库未加载，无法解析docx');
+            if (typeof mammoth === 'undefined') {
+                throw new Error('Mammoth.js 库未加载，无法解析docx');
             }
-            const zip = await JSZip.loadAsync(file);
-            const docXml = await zip.file("word/document.xml")?.async("string");
-            if (!docXml) throw new Error('无法找到word/document.xml');
-
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(docXml, "text/xml");
-            const paragraphs = xmlDoc.getElementsByTagNameNS(
-                'http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'p');
-            let text = '';
-            for (const p of paragraphs) {
-                const textNodes = p.getElementsByTagNameNS(
-                    'http://schemas.openxmlformats.org/wordprocessingml/2006/main', 't');
-                for (const t of textNodes) {
-                    text += t.textContent;
-                }
-                text += '\n';
-            }
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            const text = result.value;
+            if (!text || !text.trim()) throw new Error('未能从DOCX中提取到文本内容');
             return text.trim();
         }
 
-        // 解析 .pptx 提取纯文本
+        // ---- 使用 pptxtojson 解析 .pptx ----
         async function extractTextFromPptx(file) {
-            if (typeof JSZip === 'undefined') {
-                throw new Error('JSZip库未加载，无法解析pptx');
+            if (typeof pptxtojson === 'undefined') {
+                throw new Error('pptxtojson 库未加载，无法解析pptx');
             }
-            const zip = await JSZip.loadAsync(file);
-            const DRAWINGML_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
-            const parser = new DOMParser();
+            const arrayBuffer = await file.arrayBuffer();
+            const jsonData = await pptxtojson.parse(arrayBuffer, { imageMode: 'none' });
+            const slides = jsonData.slides || [];
             let fullText = '';
-            let slideNum = 1;
-            const MAX_SLIDES = 200;
-
-            while (slideNum <= MAX_SLIDES) {
-                const slidePath = `ppt/slides/slide${slideNum}.xml`;
-                const slideXml = await zip.file(slidePath)?.async("string");
-                if (!slideXml) break;
-
-                const xmlDoc = parser.parseFromString(slideXml, "text/xml");
-                const textElements = xmlDoc.getElementsByTagNameNS(DRAWINGML_NS, 't');
-                let slideText = '';
-                for (const t of textElements) {
-                    slideText += t.textContent;
+            slides.forEach((slide, idx) => {
+                const slideTexts = [];
+                if (slide.note) {
+                    slideTexts.push(`[备注]: ${slide.note}`);
                 }
-                slideText = slideText.trim();
-                if (slideText) {
+                if (slide.elements && Array.isArray(slide.elements)) {
+                    slide.elements.forEach(el => {
+                        if (el.content) {
+                            const plainText = el.content
+                                .replace(/<[^>]*>/g, '')
+                                .replace(/&amp;/g, '&')
+                                .replace(/&lt;/g, '<')
+                                .replace(/&gt;/g, '>')
+                                .replace(/&quot;/g, '"')
+                                .replace(/&#39;/g, "'");
+                            if (plainText.trim()) {
+                                slideTexts.push(plainText.trim());
+                            }
+                        }
+                    });
+                }
+                if (slideTexts.length > 0) {
                     if (fullText) fullText += '\n\n';
-                    fullText += `--- 幻灯片 ${slideNum} ---\n${slideText}`;
+                    fullText += `--- 幻灯片 ${idx + 1} ---\n${slideTexts.join('\n')}`;
                 }
-                slideNum++;
-            }
-
-            if (!fullText) throw new Error('未能从PPTX中提取到文本内容');
+            });
+            if (!fullText.trim()) throw new Error('未能从PPTX中提取到文本内容');
             return fullText.trim();
         }
 
-        // 解析 .xlsx 提取纯文本（TSV格式）
+        // ---- 使用 SheetJS (xlsx) 解析 .xlsx ----
         async function extractTextFromXlsx(file) {
-            if (typeof JSZip === 'undefined') {
-                throw new Error('JSZip库未加载，无法解析xlsx');
+            if (typeof XLSX === 'undefined') {
+                throw new Error('SheetJS 库未加载，无法解析xlsx');
             }
-            const zip = await JSZip.loadAsync(file);
-            const SPREADSHEET_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
-            const parser = new DOMParser();
-
-            // 1. 解析共享字符串表
-            const sharedStringsXml = await zip.file("xl/sharedStrings.xml")?.async("string");
-            const sharedStrings = [];
-            if (sharedStringsXml) {
-                const ssDoc = parser.parseFromString(sharedStringsXml, "text/xml");
-                const siElements = ssDoc.getElementsByTagNameNS(SPREADSHEET_NS, 'si');
-                for (const si of siElements) {
-                    // 优先获取简单文本
-                    const tElements = si.getElementsByTagNameNS(SPREADSHEET_NS, 't');
-                    let combined = '';
-                    for (const t of tElements) {
-                        combined += t.textContent;
-                    }
-                    sharedStrings.push(combined);
+            const arrayBuffer = await file.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+            const sheetNames = workbook.SheetNames;
+            let allText = '';
+            for (const name of sheetNames) {
+                const sheet = workbook.Sheets[name];
+                const csv = XLSX.utils.sheet_to_csv(sheet, { strip: true });
+                if (csv.trim()) {
+                    if (allText) allText += '\n\n';
+                    allText += `=== 工作表: ${name} ===\n${csv}`;
                 }
             }
-
-            // 2. 解析工作表
-            const MAX_ROWS_PER_SHEET = 5000;
-            const MAX_SHEETS = 50;
-            let allSheetsText = '';
-            let sheetNum = 1;
-
-            while (sheetNum <= MAX_SHEETS) {
-                const sheetPath = `xl/worksheets/sheet${sheetNum}.xml`;
-                const sheetXml = await zip.file(sheetPath)?.async("string");
-                if (!sheetXml) break;
-
-                const sheetDoc = parser.parseFromString(sheetXml, "text/xml");
-                const rows = sheetDoc.getElementsByTagNameNS(SPREADSHEET_NS, 'row');
-                const sheetLines = [];
-                let rowCount = 0;
-
-                for (const row of rows) {
-                    if (rowCount >= MAX_ROWS_PER_SHEET) break;
-                    const cells = row.getElementsByTagNameNS(SPREADSHEET_NS, 'c');
-                    const cellValues = [];
-
-                    for (const cell of cells) {
-                        const cellRef = cell.getAttribute('r') || '';
-                        const cellType = cell.getAttribute('t') || '';
-                        const vElement = cell.getElementsByTagNameNS(SPREADSHEET_NS, 'v')[0];
-                        let cellValue = '';
-
-                        if (vElement) {
-                            if (cellType === 's') {
-                                // 共享字符串索引
-                                const idx = parseInt(vElement.textContent);
-                                cellValue = (idx >= 0 && idx < sharedStrings.length) ? sharedStrings[idx] :
-                                    '';
-                            } else if (cellType === 'b') {
-                                // 布尔值
-                                cellValue = vElement.textContent === '1' ? 'TRUE' : 'FALSE';
-                            } else {
-                                // 数字、日期或其他
-                                cellValue = vElement.textContent;
-                            }
-                        }
-                        cellValues.push(cellValue);
-                    }
-                    if (cellValues.some(v => v !== '')) {
-                        sheetLines.push(cellValues.join('\t'));
-                    }
-                    rowCount++;
-                }
-
-                if (sheetLines.length > 0) {
-                    if (allSheetsText) allSheetsText += '\n\n';
-                    allSheetsText += `=== 工作表 ${sheetNum} ===\n${sheetLines.join('\n')}`;
-                }
-                sheetNum++;
-            }
-
-            if (!allSheetsText) throw new Error('未能从XLSX中提取到数据');
-            return allSheetsText.trim();
+            if (!allText.trim()) throw new Error('未能从XLSX中提取到数据');
+            return allText.trim();
         }
 
         function readFileAsAttachment(file) {
@@ -1610,7 +1671,6 @@
                 const fileName = file.name || '';
                 const fileType = file.type || '';
 
-                // 判断是否为旧版Office格式（不支持）
                 const isOldPpt = fileName.endsWith('.ppt') && !fileName.endsWith('.pptx') || fileType ===
                     'application/vnd.ms-powerpoint';
                 const isOldXls = fileName.endsWith('.xls') && !fileName.endsWith('.xlsx') || fileType ===
@@ -1631,7 +1691,6 @@
                     return;
                 }
 
-                // 判断是否为 .docx
                 if (fileName.endsWith('.docx') || fileType ===
                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
                     try {
@@ -1653,7 +1712,6 @@
                     return;
                 }
 
-                // 判断是否为 .pptx
                 if (fileName.endsWith('.pptx') || fileType ===
                     'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
                     try {
@@ -1675,7 +1733,6 @@
                     return;
                 }
 
-                // 判断是否为 .xlsx
                 if (fileName.endsWith('.xlsx') || fileType ===
                     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
                     try {
@@ -1697,7 +1754,6 @@
                     return;
                 }
 
-                // 图片处理
                 if (file.type.startsWith('image/')) {
                     const reader = new FileReader();
                     reader.onload = async (e) => {
@@ -1720,7 +1776,6 @@
                     reader.onerror = () => reject(new Error('读取图片失败'));
                     reader.readAsDataURL(file);
                 } else {
-                    // 文本文件
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const textContent = e.target.result;
@@ -1765,7 +1820,6 @@
                     thumbHtml =
                         `<img src="${att.fullDataUrl}" alt="${escapeHtml(att.name)}" class="attachment-thumb" onclick="viewAttachmentImage(${idx})" title="点击查看大图">`;
                 } else {
-                    // 为不同文件类型选择合适的图标
                     let iconName = 'file-text';
                     if (att.isDocx) iconName = 'file-text';
                     else if (att.isPptx) iconName = 'presentation';
@@ -1927,7 +1981,7 @@
             bubble.className = `msg-bubble ${isAI ? 'ai-bubble' : 'user-bubble'}`;
             if (content) {
                 bubble.innerHTML =
-                `<div class="prose prose-invert prose-sm ai-content-area">${marked.parse(content)}</div>`;
+                    `<div class="prose prose-invert prose-sm ai-content-area">${marked.parse(content)}</div>`;
                 const contentArea = bubble.querySelector('.ai-content-area');
                 if (contentArea) renderMathFormulas(contentArea);
                 bubble.querySelectorAll('pre').forEach(pre => {
@@ -1936,8 +1990,10 @@
                         const copyBtn = document.createElement('button');
                         copyBtn.className = 'code-copy-btn';
                         copyBtn.innerText = '复制代码';
-                        copyBtn.onclick = (e) => { e.stopPropagation();
-                            copyToClipboard(code.innerText, copyBtn); };
+                        copyBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            copyToClipboard(code.innerText, copyBtn);
+                        };
                         pre.appendChild(copyBtn);
                     }
                 });
@@ -1987,8 +2043,10 @@
                 const copyMsgBtn = document.createElement('span');
                 copyMsgBtn.className = 'action-btn';
                 copyMsgBtn.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制`;
-                copyMsgBtn.onclick = (e) => { e.stopPropagation();
-                    copyToClipboard(content || '', copyMsgBtn); };
+                copyMsgBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    copyToClipboard(content || '', copyMsgBtn);
+                };
                 const retryBtn = document.createElement('span');
                 retryBtn.className = 'action-btn';
                 retryBtn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> 重试`;
@@ -2022,9 +2080,11 @@
                 btnElement.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5"></i> 已复制`;
                 btnElement.style.color = "#10b981";
                 lucide.createIcons();
-                setTimeout(() => { btnElement.innerHTML = original;
+                setTimeout(() => {
+                    btnElement.innerHTML = original;
                     btnElement.style.color = "";
-                    lucide.createIcons(); }, 2000);
+                    lucide.createIcons();
+                }, 2000);
             } catch (err) { console.error(err); }
         }
 
@@ -2050,15 +2110,22 @@
 
         async function pushToCloud(chat, method) {
             const cleanMessages = stripAttachmentsForCloud(chat.messages);
-            const body = { chatId: chat.id, title: chat.title, messages: cleanMessages, updatedAtMs: chat.updatedAt || Date
-                    .now() };
+            const body = {
+                chatId: chat.id,
+                title: chat.title,
+                messages: cleanMessages,
+                updatedAtMs: chat.updatedAt || Date.now()
+            };
             const path = method === 'PUT' ? chat.lcObjectId : '';
             try {
                 const res = await lcFetch(path, { method, body: JSON.stringify(body) });
                 const result = await res.json();
                 if (method === 'POST') chat.lcObjectId = result.objectId;
                 localStorage.setItem('ai_chats', JSON.stringify(chats));
-            } catch (e) { console.error("推送失败", e); throw e; }
+            } catch (e) {
+                console.error("推送失败", e);
+                throw e;
+            }
         }
 
         function setSyncUI(isSyncing) { document.getElementById('sync-status').classList.toggle('hidden', !isSyncing); }
@@ -2078,16 +2145,23 @@
                 for (const l of localChats) {
                     const attMap = [];
                     l.messages.forEach((m, idx) => {
-                        if (m.attachments && m.attachments.length > 0) attMap.push({ index: idx,
-                            attachments: m.attachments });
+                        if (m.attachments && m.attachments.length > 0) attMap.push({
+                            index: idx,
+                            attachments: m.attachments
+                        });
                     });
                     if (attMap.length > 0) localAttachmentsMap.set(l.id, attMap);
                 }
                 for (const c of cloudChats) {
                     const l = localMap.get(c.chatId);
                     if (!l || (c.updatedAtMs || 0) > (l.updatedAt || 0)) {
-                        const newLocal = { id: c.chatId, title: c.title, messages: c.messages, updatedAt: c.updatedAtMs ||
-                                0, lcObjectId: c.objectId };
+                        const newLocal = {
+                            id: c.chatId,
+                            title: c.title,
+                            messages: c.messages,
+                            updatedAt: c.updatedAtMs || 0,
+                            lcObjectId: c.objectId
+                        };
                         if (!l) localChats.push(newLocal);
                         else Object.assign(l, newLocal);
                         hasLocalChange = true;
@@ -2105,8 +2179,10 @@
                 for (const l of localChats) {
                     const c = cloudMap.get(l.id);
                     if (!c) pushPromises.push(pushToCloud(l, 'POST'));
-                    else if ((l.updatedAt || 0) > (c.updatedAtMs || 0)) { l.lcObjectId = c.objectId;
-                        pushPromises.push(pushToCloud(l, 'PUT')); }
+                    else if ((l.updatedAt || 0) > (c.updatedAtMs || 0)) {
+                        l.lcObjectId = c.objectId;
+                        pushPromises.push(pushToCloud(l, 'PUT'));
+                    }
                 }
                 await Promise.all(pushPromises);
                 if (hasLocalChange) {
@@ -2114,38 +2190,55 @@
                     chats = localChats;
                     localStorage.setItem('ai_chats', JSON.stringify(chats));
                     renderChatHistory();
-                    if (activeChatId) { const currentChat = chats.find(c => c.id === activeChatId); if (currentChat)
-                            renderMessages(currentChat.messages); }
+                    if (activeChatId) {
+                        const currentChat = chats.find(c => c.id === activeChatId);
+                        if (currentChat)
+                            renderMessages(currentChat.messages);
+                    }
                 }
             } catch (err) { console.error("同步异常:", err); } finally { setSyncUI(false); }
         }
 
-        function toggleSidebar(show) { document.getElementById('sidebar').classList.toggle('active', show);
-            document.getElementById('sidebar-overlay').classList.toggle('active', show); }
+        function toggleSidebar(show) {
+            document.getElementById('sidebar').classList.toggle('active', show);
+            document.getElementById('sidebar-overlay').classList.toggle('active', show);
+        }
 
-        function toggleSettings() { const modal = document.getElementById('settings-modal');
+        function toggleSettings() {
+            const modal = document.getElementById('settings-modal');
             modal.classList.toggle('flex');
-            modal.classList.toggle('hidden'); if (modal.classList.contains('flex')) renderMemoriesToSettings();
-            lucide.createIcons(); }
+            modal.classList.toggle('hidden');
+            if (modal.classList.contains('flex')) renderMemoriesToSettings();
+            lucide.createIcons();
+        }
 
-        function setTemp(val, btn) { currentTemp = val;
+        function setTemp(val, btn) {
+            currentTemp = val;
             document.querySelectorAll('.temp-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active'); }
+            btn.classList.add('active');
+        }
 
-        function setFontSize(size, btn) { currentFontSize = size;
+        function setFontSize(size, btn) {
+            currentFontSize = size;
             document.body.classList.remove('font-size-small', 'font-size-medium', 'font-size-large');
             document.body.classList.add(`font-size-${size}`);
-            document.querySelectorAll('.font-btn').forEach(b => b.classList.toggle('active', b.dataset.size === size)); }
+            document.querySelectorAll('.font-btn').forEach(b => b.classList.toggle('active', b.dataset.size === size));
+        }
 
-        function setTheme(theme, save = true) { document.body.classList.remove('theme-light', 'theme-dark');
-            document.body.classList.add(`theme-${theme}`); if (save) localStorage.setItem('theme', theme);
+        function setTheme(theme, save = true) {
+            document.body.classList.remove('theme-light', 'theme-dark');
+            document.body.classList.add(`theme-${theme}`);
+            if (save) localStorage.setItem('theme', theme);
             updateBackgroundImage();
-            lucide.createIcons(); }
+            lucide.createIcons();
+        }
 
-        function setBackgroundImage(num, btn) { selectedBackgroundImage = num;
+        function setBackgroundImage(num, btn) {
+            selectedBackgroundImage = num;
             document.querySelectorAll('[id^="bg-thumb-"]').forEach(img => { img.style.borderColor = '#4b5563'; });
             btn.style.borderColor = '#10b981';
-            updateBackgroundImage(); }
+            updateBackgroundImage();
+        }
 
         function saveSettings() {
             systemPrompt = document.getElementById('sys-prompt').value;
@@ -2162,36 +2255,57 @@
             toggleSettings();
         }
 
-        function updateBackgroundImage() { const bgNum = selectedBackgroundImage;
-            const newUrl = `${bgNum}.JPG`; if (document.body.classList.contains('theme-light')) {
+        function updateBackgroundImage() {
+            const bgNum = selectedBackgroundImage;
+            const newUrl = `${bgNum}.JPG`;
+            if (document.body.classList.contains('theme-light')) {
                 document.body.style.background =
-                    `linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6)), url('${newUrl}') center/cover fixed`; } else {
+                    `linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6)), url('${newUrl}') center/cover fixed`;
+            } else {
                 document.body.style.background =
-                    `linear-gradient(145deg, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.6)), url('${newUrl}') center/cover fixed`; } }
+                    `linear-gradient(145deg, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.6)), url('${newUrl}') center/cover fixed`;
+            }
+        }
 
         const INPUT_EXPAND_THRESHOLD = 100;
 
-        function autoResize(t) { t.style.height = 'auto';
-            t.style.height = t.scrollHeight + 'px'; const footer = document.getElementById('input-footer'); if (footer) { if (
-                    t.scrollHeight > INPUT_EXPAND_THRESHOLD) { footer.classList.add('input-expanded'); } else { footer
-                    .classList.remove('input-expanded'); } } }
+        function autoResize(t) {
+            t.style.height = 'auto';
+            t.style.height = t.scrollHeight + 'px';
+            const footer = document.getElementById('input-footer');
+            if (footer) {
+                if (t.scrollHeight > INPUT_EXPAND_THRESHOLD) { footer.classList.add('input-expanded'); } else {
+                    footer.classList.remove('input-expanded');
+                }
+            }
+        }
 
-        function resetInputState() { const input = document.getElementById('user-input'); const footer = document
-                .getElementById('input-footer');
+        function resetInputState() {
+            const input = document.getElementById('user-input');
+            const footer = document.getElementById('input-footer');
             input.style.height = 'auto';
-            input.value = ''; if (footer) footer.classList.remove('input-expanded'); }
+            input.value = '';
+            if (footer) footer.classList.remove('input-expanded');
+        }
 
-        function syncRetrySelect() { const mainSelect = document.getElementById('model-select'); const retrySelect = document
-                .getElementById('retry-model-select');
-            retrySelect.innerHTML = mainSelect.innerHTML; }
+        function syncRetrySelect() {
+            const mainSelect = document.getElementById('model-select');
+            const retrySelect = document.getElementById('retry-model-select');
+            retrySelect.innerHTML = mainSelect.innerHTML;
+        }
 
-        function openRetryMenu(e) { e.stopPropagation(); const popover = document.getElementById('retry-popover');
+        function openRetryMenu(e) {
+            e.stopPropagation();
+            const popover = document.getElementById('retry-popover');
             popover.style.left = `${e.clientX - 10}px`;
             popover.style.top = `${e.clientY + 15}px`;
-            popover.classList.remove('hidden'); }
+            popover.classList.remove('hidden');
+        }
 
-        function closeRetryMenu(e) { const popover = document.getElementById('retry-popover'); if (popover && !popover
-                .contains(e.target)) popover.classList.add('hidden'); }
+        function closeRetryMenu(e) {
+            const popover = document.getElementById('retry-popover');
+            if (popover && !popover.contains(e.target)) popover.classList.add('hidden');
+        }
 
         function confirmRetry() {
             const selectedModel = document.getElementById('retry-model-select').value;
@@ -2206,19 +2320,26 @@
             requestAI(lastUserMsg.content, selectedModel, chat, retryAttachments);
         }
 
-        function stopGeneration() { if (abortController) { abortController.abort();
+        function stopGeneration() {
+            if (abortController) {
+                abortController.abort();
                 abortController = null;
                 isGenerating = false;
                 document.getElementById('send-btn').classList.remove('hidden');
-                document.getElementById('stop-btn').classList.add('hidden'); } }
+                document.getElementById('stop-btn').classList.add('hidden');
+            }
+        }
 
-        function renderChatHistory() { filteredChats = chats;
-            renderFilteredHistory(); }
+        function renderChatHistory() {
+            filteredChats = chats;
+            renderFilteredHistory();
+        }
 
-        function filterChats() { const searchTerm = document.getElementById('chat-search')?.value?.toLowerCase()?.trim() ||
-                '';
+        function filterChats() {
+            const searchTerm = document.getElementById('chat-search')?.value?.toLowerCase()?.trim() || '';
             filteredChats = searchTerm ? chats.filter(chat => chat.title.toLowerCase().includes(searchTerm)) : chats;
-            renderFilteredHistory(); }
+            renderFilteredHistory();
+        }
 
         function renderFilteredHistory() {
             const container = document.getElementById('chat-history');
@@ -2242,19 +2363,28 @@
             if (chat.lcObjectId) {
                 try {
                     const deleteUrl = `${LC_CONFIG.base}/${chat.lcObjectId}`;
-                    await fetch(deleteUrl, { method: 'DELETE', headers: { 'X-LC-Id': LC_CONFIG.id, 'X-LC-Key': `${LC_CONFIG.masterKey},master`,
-                            'Content-Type': 'application/json' } });
+                    await fetch(deleteUrl, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-LC-Id': LC_CONFIG.id,
+                            'X-LC-Key': `${LC_CONFIG.masterKey},master`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
                 } catch (e) { alert('云端删除失败，请稍后重试。'); return; }
             }
             const index = chats.findIndex(c => c.id === chatId);
             if (index !== -1) chats.splice(index, 1);
             localStorage.setItem('ai_chats', JSON.stringify(chats));
-            if (activeChatId === chatId) { if (chats.length > 0) switchChat(chats[0].id);
-                else createNewChat(); }
+            if (activeChatId === chatId) {
+                if (chats.length > 0) switchChat(chats[0].id);
+                else createNewChat();
+            }
             filterChats();
         }
 
-        function createNewChat() { const id = Date.now().toString();
+        function createNewChat() {
+            const id = Date.now().toString();
             const newChat = { id, title: '新对话', messages: [], updatedAt: Date.now() };
             chats.unshift(newChat);
             localStorage.setItem('ai_chats', JSON.stringify(chats));
@@ -2262,13 +2392,18 @@
             switchChat(id);
             syncData();
             toggleSidebar(false);
-            clearAttachments(); }
+            clearAttachments();
+        }
 
-        function switchChat(id) { activeChatId = id; const chat = chats.find(c => c.id === id); if (!chat) return;
+        function switchChat(id) {
+            activeChatId = id;
+            const chat = chats.find(c => c.id === id);
+            if (!chat) return;
             document.getElementById('active-chat-title').innerText = chat.title;
             renderMessages(chat.messages);
             renderChatHistory();
-            clearAttachments(); }
+            clearAttachments();
+        }
 
         async function sendMessage() {
             if (isGenerating) return;
@@ -2277,8 +2412,10 @@
             if (!text && currentAttachments.length === 0) return;
             const model = document.getElementById('model-select').value;
             const chat = chats.find(c => c.id === activeChatId);
-            if (chat.messages.length === 0) { chat.title = text.slice(0, 20) || '文件对话';
-                document.getElementById('active-chat-title').innerText = chat.title; }
+            if (chat.messages.length === 0) {
+                chat.title = text.slice(0, 20) || '文件对话';
+                document.getElementById('active-chat-title').innerText = chat.title;
+            }
             const userMsg = { role: 'user', content: text };
             const attachmentsToSend = [...currentAttachments];
             if (attachmentsToSend.length > 0) {
@@ -2324,8 +2461,12 @@
                 const response = await fetch(`${getBaseURL()}/chat/completions`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAPIKey()}` },
-                    body: JSON.stringify({ model, temperature: currentTemp, messages: [{ role: 'system',
-                            content: systemWithMem }, ...apiMessages], stream: true }),
+                    body: JSON.stringify({
+                        model,
+                        temperature: currentTemp,
+                        messages: [{ role: 'system', content: systemWithMem }, ...apiMessages],
+                        stream: true
+                    }),
                     signal: abortController.signal
                 });
                 if (!response.ok) throw new Error(`API error: ${response.status}`);
@@ -2343,34 +2484,46 @@
                             try {
                                 const json = JSON.parse(data);
                                 const delta = json.choices[0].delta || {};
-                                if (delta.reasoning_content) { thinkingContent += delta.reasoning_content; if (
-                                        thinkingDiv) { thinkingDiv.style.display = 'block';
-                                        thinkingDiv.innerText = thinkingContent; } }
-                                if (delta.content) { receivedAny = true;
+                                if (delta.reasoning_content) {
+                                    thinkingContent += delta.reasoning_content;
+                                    if (thinkingDiv) {
+                                        thinkingDiv.style.display = 'block';
+                                        thinkingDiv.innerText = thinkingContent;
+                                    }
+                                }
+                                if (delta.content) {
+                                    receivedAny = true;
                                     fullContent += delta.content;
                                     contentArea.innerHTML = marked.parse(fullContent);
-                                    renderMathFormulas(contentArea); }
-                            } catch (e) {}
+                                    renderMathFormulas(contentArea);
+                                }
+                            } catch (e) { }
                         }
                     }
                 }
                 if (!receivedAny && !fullContent.trim()) fullContent = '';
-                contentArea.querySelectorAll('pre code').forEach(el => { hljs.highlightElement(el); if (!el
-                        .parentElement.querySelector('.code-copy-btn')) { const copyBtn = document.createElement(
-                            'button');
+                contentArea.querySelectorAll('pre code').forEach(el => {
+                    hljs.highlightElement(el);
+                    if (!el.parentElement.querySelector('.code-copy-btn')) {
+                        const copyBtn = document.createElement('button');
                         copyBtn.className = 'code-copy-btn';
                         copyBtn.innerText = '复制代码';
-                        copyBtn.onclick = (e) => { e.stopPropagation();
-                            copyToClipboard(el.innerText, copyBtn); };
-                        el.parentElement.appendChild(copyBtn); } });
+                        copyBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            copyToClipboard(el.innerText, copyBtn);
+                        };
+                        el.parentElement.appendChild(copyBtn);
+                    }
+                });
                 chat.messages.push({ role: 'assistant', content: fullContent, model, reasoning: thinkingContent });
                 chat.updatedAt = Date.now();
                 localStorage.setItem('ai_chats', JSON.stringify(chats));
                 renderChatHistory();
                 await syncData();
             } catch (err) {
-                if (err.name !== 'AbortError') { contentArea.innerHTML =
-                        `<span class="text-red-500">Error: ${err.message}</span>`; } else {
+                if (err.name !== 'AbortError') {
+                    contentArea.innerHTML = `<span class="text-red-500">Error: ${err.message}</span>`;
+                } else {
                     if (!fullContent.trim() && !receivedAny) fullContent = '';
                     contentArea.innerHTML = marked.parse(fullContent || '');
                     renderMathFormulas(contentArea);
@@ -2410,25 +2563,37 @@
             if (!latestChat || (latestChat.messages && latestChat.messages.length > 0)) createNewChat();
             else switchChat(latestChat.id);
             const input = document.getElementById('user-input');
-            input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e
-                    .preventDefault();
-                    sendMessage(); } });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
             input.addEventListener('paste', handlePaste);
             highlightFontBtn(currentFontSize);
             await fetchMemoriesFromCloud();
             document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
         };
 
-        function updateTempUI() { document.querySelectorAll('.temp-btn').forEach(btn => { btn.classList.toggle('active',
-                parseFloat(btn.dataset.temp) === currentTemp); }); }
+        function updateTempUI() {
+            document.querySelectorAll('.temp-btn').forEach(btn => {
+                btn.classList.toggle('active', parseFloat(btn.dataset.temp) === currentTemp);
+            });
+        }
 
-        function highlightFontBtn(size) { document.querySelectorAll('.font-btn').forEach(btn => { btn.classList.toggle(
-                'active', btn.dataset.size === size); }); }
+        function highlightFontBtn(size) {
+            document.querySelectorAll('.font-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.size === size);
+            });
+        }
 
-        function highlightBackgroundThumb() { const selectedThumb = document.getElementById(
-            `bg-thumb-${selectedBackgroundImage}`); if (selectedThumb) { document.querySelectorAll('[id^="bg-thumb-"]')
-                .forEach(img => { img.style.borderColor = '#3d3d3d'; });
-            selectedThumb.style.borderColor = '#10b981'; } }
+        function highlightBackgroundThumb() {
+            const selectedThumb = document.getElementById(`bg-thumb-${selectedBackgroundImage}`);
+            if (selectedThumb) {
+                document.querySelectorAll('[id^="bg-thumb-"]').forEach(img => { img.style.borderColor = '#3d3d3d'; });
+                selectedThumb.style.borderColor = '#10b981';
+            }
+        }
     </script>
 </body>
 
