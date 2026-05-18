@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
@@ -21,6 +20,9 @@
     </script>
     <script src="pptxtojson.js"></script>
     <script src="xlsx.min.js">
+    </script>
+    <!-- Token 预估库 -->
+    <script src="https://cdn.jsdelivr.net/npm/gpt-3-encoder@1.1.4/dist/gpt-3-encoder.min.js">
     </script>
     <style>
         /* ========== 基础重置 & 液态玻璃 (调整图片亮度/透明度) ========== */
@@ -59,7 +61,6 @@
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
         }
 
-        /* AI 气泡彻底移除背景/边框/毛玻璃 (完全透明) */
         body.theme-light .msg-bubble.ai-bubble {
             background: transparent !important;
             backdrop-filter: none !important;
@@ -70,7 +71,6 @@
             padding: 0.85rem 1.25rem;
         }
 
-        /* 用户气泡保留原样 */
         body.theme-light .msg-bubble.user-bubble {
             background: rgba(220, 230, 255, 0.7) !important;
             backdrop-filter: blur(8px);
@@ -117,7 +117,6 @@
             transform: none !important;
         }
 
-        /* 代码块样式 */
         body.theme-light pre {
             background: rgba(20, 20, 30, 0.8) !important;
             backdrop-filter: blur(2px);
@@ -164,7 +163,6 @@
             color: white;
         }
 
-        /* 记忆卡片样式 (浅色) */
         body.theme-light .license-box {
             background: rgba(235, 235, 240, 0.8) !important;
             border-color: rgba(100, 100, 100, 0.2) !important;
@@ -183,7 +181,6 @@
             color: #2a2a2a !important;
         }
 
-        /* ========== KaTeX 数学公式样式 ========== */
         .katex-display {
             margin: 1rem 0 !important;
             padding: 1rem 0 !important;
@@ -239,7 +236,7 @@
             color: #4a4a4a !important;
         }
 
-        /* ----- 深色模式：更黑叠加层，降低图片亮度 ----- */
+        /* ----- 深色模式 ----- */
         body.theme-dark {
             background: linear-gradient(145deg, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.6)), url('1.JPG') center/cover fixed;
             color: #f0f0f0;
@@ -682,7 +679,6 @@
             color: #9ca3af;
         }
 
-        /* ========== Markdown 表格和分割线样式 ========== */
         .ai-content-area table {
             border-collapse: collapse;
             width: 100%;
@@ -717,7 +713,6 @@
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
         }
 
-        /* ========== 输入框展开居中样式 ========== */
         #input-footer {
             transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             will-change: transform;
@@ -739,7 +734,6 @@
             }
         }
 
-        /* ========== 附件预览区样式（移除容器玻璃效果） ========== */
         #attachments-preview {
             display: flex;
             flex-wrap: wrap;
@@ -747,7 +741,6 @@
             padding: 0.6rem 0.75rem;
             min-height: 0;
             transition: all 0.3s ease;
-            /* 以下属性已移除玻璃效果 */
             background: transparent;
             backdrop-filter: none;
             -webkit-backdrop-filter: none;
@@ -769,13 +762,11 @@
             box-shadow: none;
         }
 
-        /* ========== 附件卡片 - 液态玻璃效果 ========== */
         .attachment-card {
             position: relative;
             display: inline-flex;
             flex-direction: column;
             align-items: center;
-            /* 深色模式液态玻璃 */
             background: linear-gradient(145deg,
                     rgba(55, 58, 68, 0.7) 0%,
                     rgba(40, 43, 52, 0.65) 40%,
@@ -792,11 +783,9 @@
                 0 6px 20px rgba(0, 0, 0, 0.25),
                 inset 0 1px 0 rgba(255, 255, 255, 0.08),
                 inset 0 -2px 0 rgba(0, 0, 0, 0.06);
-            /* 微妙的顶部高光模拟玻璃折射 */
             overflow: visible;
         }
 
-        /* 附件卡片顶部光泽条纹 */
         .attachment-card::before {
             content: '';
             position: absolute;
@@ -821,7 +810,6 @@
             opacity: 1;
         }
 
-        /* 浅色模式附件卡片 */
         body.theme-light .attachment-card {
             background: linear-gradient(145deg,
                     rgba(255, 255, 255, 0.78) 0%,
@@ -850,7 +838,6 @@
             opacity: 0.9;
         }
 
-        /* 附件卡片悬停效果 */
         .attachment-card:hover {
             border-color: rgba(16, 185, 129, 0.7);
             box-shadow:
@@ -871,7 +858,6 @@
             transform: translateY(-2px);
         }
 
-        /* 图片缩略图 */
         .attachment-thumb {
             width: 64px;
             height: 64px;
@@ -895,7 +881,6 @@
             box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
         }
 
-        /* 文件图标容器 */
         .attachment-file-icon {
             width: 64px;
             height: 64px;
@@ -922,7 +907,6 @@
             box-shadow: 0 0 10px rgba(16, 185, 129, 0.12);
         }
 
-        /* 附件名称 */
         .attachment-name {
             font-size: 0.65rem;
             color: #b0b0b8;
@@ -941,7 +925,6 @@
             color: #4a4a52;
         }
 
-        /* 移除按钮 */
         .attachment-remove {
             position: absolute;
             top: -7px;
@@ -976,7 +959,6 @@
             border-color: rgba(255, 255, 255, 0.5);
         }
 
-        /* 用户气泡中的附件样式 */
         .msg-attachments {
             display: flex;
             flex-wrap: wrap;
@@ -1003,7 +985,6 @@
             border-color: rgba(0, 0, 0, 0.2);
         }
 
-        /* 图片放大查看弹窗 */
         .image-lightbox {
             position: fixed;
             inset: 0;
@@ -1023,7 +1004,6 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
 
-        /* 附件按钮样式 - 与发送按钮一致 */
         #attach-btn {
             display: flex;
             align-items: center;
@@ -1062,6 +1042,12 @@
 
         body.theme-light #attach-btn.has-files {
             background: rgba(16, 185, 129, 0.2);
+        }
+
+        /* token 预估显示样式 */
+        #token-estimate {
+            font-variant-numeric: tabular-nums;
+            transition: color 0.2s;
         }
     </style>
 </head>
@@ -1123,7 +1109,7 @@
             <div class="max-w-4xl mx-auto relative flex flex-col items-start">
                 <!-- 附件预览区 -->
                 <div id="attachments-preview" class="w-full"></div>
-                <div class="model-selector-container">
+                <div class="model-selector-container flex items-center gap-2">
                     <select id="model-select" onchange="syncRetrySelect()">
                         <option value="gpt-5.5-2026-04-24" selected>gpt-5.5-2026-04-24</option>
                         <option value="gpt-5.5">gpt-5.5</option>
@@ -1224,13 +1210,13 @@
                         <option value="gemini-3-pro-preview-thinking">gemini-3-pro-preview-thinking</option>
                         <option value="gemini-3-pro-preview-thinking-*">gemini-3-pro-preview-thinking-*</option>
                     </select>
+                    <span id="token-estimate" class="text-xs text-gray-400 ml-2 whitespace-nowrap"></span>
                 </div>
                 <!-- 输入区域 -->
                 <div class="input-area p-3 flex items-end gap-2 w-full shadow-lg">
                     <textarea id="user-input" rows="1" placeholder="给 AI 发送消息...   支持粘贴图片(Ctrl+V) | 上传Office/图片/文本"
                         class="bg-transparent flex-grow resize-none overflow-y-hidden focus:outline-none py-1 px-2 text-sm md:text-base"
                         oninput="autoResize(this)"></textarea>
-                    <!-- 附件按钮 -->
                     <button id="attach-btn" onclick="triggerFileInput()" title="附加文件"
                         class="p-2 rounded-xl transition-colors flex-shrink-0">
                         <i data-lucide="paperclip" class="w-5 h-5"></i>
@@ -1238,12 +1224,10 @@
                     <input type="file" id="hidden-file-input"
                         accept="image/*,.txt,.md,.json,.csv,.py,.js,.html,.css,.xml,.yaml,.yml,.log,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
                         multiple hidden onchange="handleFileSelect(event)">
-                    <!-- 发送按钮 -->
                     <button id="send-btn" onclick="sendMessage()"
                         class="bg-white text-black p-2 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 flex-shrink-0">
                         <i data-lucide="arrow-up" class="w-5 h-5"></i>
                     </button>
-                    <!-- 停止按钮 -->
                     <button id="stop-btn" onclick="stopGeneration()"
                         class="bg-white text-black p-2 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 hidden flex-shrink-0">
                         <i data-lucide="square" class="w-5 h-5"></i>
@@ -1337,7 +1321,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- API 设置 -->
                 <div class="border-t border-gray-700 pt-4">
                     <h2 class="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
                         <i data-lucide="key" class="w-4 h-4"></i>API 设置
@@ -1364,7 +1347,6 @@
                     <button onclick="saveSettings()"
                         class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors text-sm font-medium">保存设置</button>
                 </div>
-                <!-- 记忆库只读区域 -->
                 <div>
                     <label class="block text-sm font-medium mb-2 text-gray-300 flex items-center gap-2">
                         <i data-lucide="brain" class="w-4 h-4"></i>长久记忆库
@@ -1374,7 +1356,6 @@
                     </div>
                     <p class="text-[11px] text-gray-500 mt-2">记忆由开发者维护，每次对话AI都会参考以上信息。</p>
                 </div>
-                <!-- 软件信息 -->
                 <div class="border-t border-gray-700 pt-4">
                     <label class="block text-sm font-medium mb-3 text-gray-300 flex items-center gap-2">
                         <i data-lucide="info" class="w-4 h-4"></i>软件信息
@@ -1405,8 +1386,8 @@
 
     <script>
         // ==================== 配置 (默认值) ====================
-        const DEFAULT_API_KEY = 'sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';//请替换自己的
-        const DEFAULT_BASE_URL = 'https://api.vveai.com/v1';//请替换自己的
+        const DEFAULT_API_KEY = 'sk-2LXzp4RQCOAywuqu63EfE5D0480e46Bc9cEa8d1a5a38D117';
+        const DEFAULT_BASE_URL = 'https://api.vveai.com/v1';
 
         function getAPIKey() {
             return localStorage.getItem('api_key') || DEFAULT_API_KEY;
@@ -1417,10 +1398,10 @@
         }
 
         const LC_CONFIG = {
-            id: 'G212345678901234567890',//请替换自己的
-            key: '1111111111111111111R',//请替换自己的
-            masterKey: 't1111111111111111R',//请替换自己的
-            base: 'https://g2j1111111111d.lc-1111111111red.com/1.1/classes/AIChats'//请替换自己的
+            id: 'G2jNexXDgQoJkiR5bf7aGqZj-gzGzoHsz',
+            key: 'GF9NbWWTBVfxwjkam40Wvx3R',
+            masterKey: 'tO6fRxnoCUEAJ3HyHbzmlG9R',
+            base: 'https://g2jnexxd.lc-cn-n1-shared.com/1.1/classes/AIChats'
         };
 
         let chats = JSON.parse(localStorage.getItem('ai_chats') || '[]');
@@ -1560,6 +1541,76 @@
             });
         }
 
+        // ========== 上下文 Token 预估 ==========
+        function estimateTotalTokens() {
+            // 获取当前活跃对话
+            const chat = activeChatId ? chats.find(c => c.id === activeChatId) : null;
+            const messages = chat ? chat.messages.slice() : [];
+
+            // 构建系统消息文本
+            const memText = (cachedMemories && cachedMemories.length > 0) ?
+                "\n\n#关于对话者的长久记忆\n" + cachedMemories.map((m, idx) => `${idx + 1}. ${m}`).join("\n") +
+                "\n\n请参考记忆信息，更贴合对话者的背景进行回复。" : "";
+            const systemContent = (systemPrompt || "") + memText;
+
+            // 获取当前输入与附件文本
+            const inputText = document.getElementById('user-input')?.value || '';
+            let currentAttachmentText = '';
+            for (const att of currentAttachments) {
+                if (att.isText && att.data) {
+                    currentAttachmentText += `\n\n[文件: ${att.name}]\n${att.data}\n[/文件: ${att.name}]`;
+                }
+            }
+            const currentFullInput = inputText + currentAttachmentText;
+
+            // 拼接所有即将发送的文本内容
+            let allText = systemContent;
+            for (const msg of messages) {
+                allText += '\n' + (msg.content || '');
+                // 如果有附件且是文本，也加入（历史附件在消息中以文本形式存储或单独字段）
+                if (msg.attachments && Array.isArray(msg.attachments)) {
+                    for (const att of msg.attachments) {
+                        if (att.isText && att.data) {
+                            allText += '\n' + att.data;
+                        }
+                    }
+                }
+            }
+            // 最后加上当前输入
+            if (currentFullInput.trim()) {
+                allText += '\n' + currentFullInput;
+            }
+
+            if (!allText.trim()) return 0;
+
+            try {
+                if (typeof encode !== 'undefined') {
+                    return encode(allText).length;
+                }
+            } catch (e) {
+                // 回退到简单估算
+            }
+            // 简单回退估算
+            const chineseChars = (allText.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
+            const nonChinese = allText.replace(/[\u4e00-\u9fff\u3400-\u4dbf]/g, '');
+            const words = nonChinese.match(/\b\w+\b/g) || [];
+            const remaining = nonChinese.length - words.join('').length;
+            return Math.round(chineseChars * 2 + words.length * 1.3 + remaining * 0.2);
+        }
+
+        function updateTokenEstimate() {
+            const span = document.getElementById('token-estimate');
+            if (!span) return;
+            const tokenCount = estimateTotalTokens();
+            if (tokenCount > 0) {
+                span.textContent = `预估tokens: ${tokenCount}`;
+                span.style.display = 'inline';
+            } else {
+                span.textContent = '';
+                span.style.display = 'none';
+            }
+        }
+
         // ========== 附件管理函数 ==========
         function triggerFileInput() {
             document.getElementById('hidden-file-input').click();
@@ -1592,9 +1643,9 @@
             }
             renderAttachmentPreviews();
             updateAttachButtonState();
+            updateTokenEstimate();
         }
 
-        // ---- 使用 Mammoth.js 解析 .docx ----
         async function extractTextFromDocx(file) {
             if (typeof mammoth === 'undefined') {
                 throw new Error('Mammoth.js 库未加载，无法解析docx');
@@ -1606,7 +1657,6 @@
             return text.trim();
         }
 
-        // ---- 使用 pptxtojson 解析 .pptx ----
         async function extractTextFromPptx(file) {
             if (typeof pptxtojson === 'undefined') {
                 throw new Error('pptxtojson 库未加载，无法解析pptx');
@@ -1645,7 +1695,6 @@
             return fullText.trim();
         }
 
-        // ---- 使用 SheetJS (xlsx) 解析 .xlsx ----
         async function extractTextFromXlsx(file) {
             if (typeof XLSX === 'undefined') {
                 throw new Error('SheetJS 库未加载，无法解析xlsx');
@@ -1801,6 +1850,7 @@
                 currentAttachments.splice(index, 1);
                 renderAttachmentPreviews();
                 updateAttachButtonState();
+                updateTokenEstimate();
             }
         }
 
@@ -1808,6 +1858,7 @@
             currentAttachments = [];
             renderAttachmentPreviews();
             updateAttachButtonState();
+            updateTokenEstimate();
         }
 
         function renderAttachmentPreviews() {
@@ -1899,6 +1950,7 @@
                 }
                 renderAttachmentPreviews();
                 updateAttachButtonState();
+                updateTokenEstimate();
             })();
         }
 
@@ -2253,6 +2305,7 @@
             if (baseUrlInput) localStorage.setItem('base_url', baseUrlInput);
             else localStorage.removeItem('base_url');
             toggleSettings();
+            updateTokenEstimate();
         }
 
         function updateBackgroundImage() {
@@ -2278,6 +2331,7 @@
                     footer.classList.remove('input-expanded');
                 }
             }
+            updateTokenEstimate();
         }
 
         function resetInputState() {
@@ -2286,6 +2340,7 @@
             input.style.height = 'auto';
             input.value = '';
             if (footer) footer.classList.remove('input-expanded');
+            updateTokenEstimate();
         }
 
         function syncRetrySelect() {
@@ -2403,6 +2458,7 @@
             renderMessages(chat.messages);
             renderChatHistory();
             clearAttachments();
+            updateTokenEstimate();
         }
 
         async function sendMessage() {
@@ -2558,6 +2614,8 @@
             syncRetrySelect();
             renderChatHistory();
             await syncData();
+            // 记忆也提前加载
+            await fetchMemoriesFromCloud();
             chats.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
             const latestChat = chats.length ? chats[0] : null;
             if (!latestChat || (latestChat.messages && latestChat.messages.length > 0)) createNewChat();
@@ -2571,8 +2629,8 @@
             });
             input.addEventListener('paste', handlePaste);
             highlightFontBtn(currentFontSize);
-            await fetchMemoriesFromCloud();
             document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+            updateTokenEstimate();
         };
 
         function updateTempUI() {
@@ -2596,5 +2654,4 @@
         }
     </script>
 </body>
-
 </html>
