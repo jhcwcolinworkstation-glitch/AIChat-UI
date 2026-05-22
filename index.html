@@ -21,18 +21,18 @@
     <script src="pptxtojson.js"></script>
     <script src="xlsx.min.js">
     </script>
-    <!-- Token 预估库 -->
+    <!-- Token 编码器 -->
     <script src="https://cdn.jsdelivr.net/npm/gpt-3-encoder@1.1.4/dist/gpt-3-encoder.min.js">
     </script>
     <style>
-        /* ========== 基础重置 & 液态玻璃 (调整图片亮度/透明度) ========== */
+        /* ========== 全局背景 & 液态玻璃效果 (叠加图片背景/透明层) ========== */
         body {
             transition: background 0.2s ease;
             margin: 0;
             min-height: 100vh;
         }
 
-        /* ----- 浅色模式：更白叠加层，降低图片可见度 ----- */
+        /* ----- 浅色模式：亮底叠加层，确保图片可见度 ----- */
         body.theme-light {
             background: linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6)), url('1.JPG') center/cover fixed;
             color: #1f1f1f;
@@ -80,7 +80,8 @@
         }
 
         body.theme-light #model-select,
-        body.theme-light #retry-model-select {
+        body.theme-light #retry-model-select,
+        body.theme-light #image-detail-select {
             background: rgba(240, 240, 245, 0.9) !important;
             backdrop-filter: blur(8px);
             border: 1px solid rgba(100, 100, 100, 0.2) !important;
@@ -88,7 +89,8 @@
         }
 
         body.theme-light #model-select:focus,
-        body.theme-light #retry-model-select:focus {
+        body.theme-light #retry-model-select:focus,
+        body.theme-light #image-detail-select:focus {
             border-color: #10b981 !important;
         }
 
@@ -278,7 +280,8 @@
         }
 
         body.theme-dark #model-select,
-        body.theme-dark #retry-model-select {
+        body.theme-dark #retry-model-select,
+        body.theme-dark #image-detail-select {
             background: rgba(30, 30, 35, 0.8) !important;
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -356,7 +359,7 @@
             border-left: 3px solid #10b981;
         }
 
-        /* ========== 全局悬停无放大 ========== */
+        /* ========== 全局悬停：禁止放大 ========== */
         button:hover,
         .action-btn:hover,
         .sidebar button:hover,
@@ -377,7 +380,7 @@
             transform: none !important;
         }
 
-        /* ========== 布局核心 ========== */
+        /* ========== 响应式侧栏 ========== */
         .sidebar {
             width: 260px;
             transition: transform 0.3s ease;
@@ -487,6 +490,35 @@
             font-size: 0.85rem;
             outline: none;
             cursor: pointer;
+        }
+
+        #image-detail-select {
+            padding: 5px 12px;
+            font-size: 0.8rem;
+            border-radius: 0.75rem;
+            outline: none;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(30, 30, 35, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: #f0f0f0;
+            transition: border-color 0.2s ease;
+            min-width: 150px;
+        }
+
+        #image-detail-select:focus {
+            border-color: #10b981 !important;
+        }
+
+        body.theme-light #image-detail-select {
+            background: rgba(240, 240, 245, 0.9) !important;
+            border: 1px solid rgba(100, 100, 100, 0.2) !important;
+            color: #1f1f1f;
+        }
+
+        body.theme-light #image-detail-select:focus {
+            border-color: #10b981 !important;
         }
 
         .code-copy-btn {
@@ -1049,22 +1081,27 @@
             font-variant-numeric: tabular-nums;
             transition: color 0.2s;
         }
+
+        /* 图片精细度容器 - 默认隐藏，有图片附件时显示 */
+        #image-detail-container {
+            display: none;
+        }
     </style>
 </head>
 
 <body class="h-screen flex overflow-hidden theme-light font-size-medium" onclick="closeRetryMenu(event)">
-    <!-- 遮罩 & 侧边栏 -->
+    <!-- 侧栏 & 遮罩层 -->
     <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
     <aside id="sidebar" class="sidebar h-full flex flex-col p-3 flex-shrink-0">
         <button onclick="createNewChat()"
             class="flex items-center gap-3 px-3 py-3 border border-gray-600 rounded-xl hover:bg-gray-800 transition-colors mb-4">
-            <i data-lucide="plus" class="w-4 h-4"></i><span class="text-sm font-medium">开启新对话</span>
+            <i data-lucide="plus" class="w-4 h-4"></i><span class="text-sm font-medium">新建对话</span>
         </button>
         <div id="chat-history" class="flex-grow overflow-y-auto space-y-1 no-scrollbar"></div>
         <div class="mt-auto border-t border-gray-700 pt-4 flex flex-col gap-2">
             <button onclick="syncData()"
                 class="flex items-center gap-3 px-3 py-2 hover:bg-gray-800 rounded-xl transition-colors text-emerald-400">
-                <i data-lucide="cloud-download" class="w-5 h-5"></i><span class="text-sm font-medium">立即同步云端</span>
+                <i data-lucide="cloud-download" class="w-5 h-5"></i><span class="text-sm font-medium">云端同步</span>
             </button>
             <button onclick="window.location.href='./intro.html'"
                 class="flex items-center gap-3 px-3 py-2 hover:bg-gray-800 rounded-xl transition-colors text-amber-400">
@@ -1088,7 +1125,7 @@
         </header>
         <div id="messages-wrapper" class="flex-grow overflow-y-auto p-4 md:p-8 space-y-10 no-scrollbar scroll-smooth">
         </div>
-        <!-- 重试浮层 -->
+        <!-- 重试弹窗 -->
         <div id="retry-popover" class="hidden" onclick="event.stopPropagation()">
             <span class="text-[10px] text-gray-400 px-2 pt-1 font-bold uppercase tracking-wider">选择模型并重试</span>
             <div class="flex gap-1 mt-1">
@@ -1100,7 +1137,7 @@
                 </button>
             </div>
         </div>
-        <!-- 图片查看弹窗 -->
+        <!-- 图片灯箱 -->
         <div id="image-lightbox" class="image-lightbox hidden" onclick="closeLightbox()">
             <img id="lightbox-img" src="" alt="查看大图">
         </div>
@@ -1109,6 +1146,17 @@
             <div class="max-w-4xl mx-auto relative flex flex-col items-start">
                 <!-- 附件预览区 -->
                 <div id="attachments-preview" class="w-full"></div>
+                <!-- 图片识别精细度选择 (仅当有图片附件时显示) -->
+                <div id="image-detail-container" class="flex items-center gap-2 mb-1.5 w-full">
+                    <span class="text-[11px] text-gray-400 font-medium whitespace-nowrap select-none">图片精细度</span>
+                    <select id="image-detail-select" onchange="onImageDetailChange()">
+                        <option value="low">低精细度 (快速)</option>
+                        <option value="medium" selected>中等精细度 (均衡)</option>
+                        <option value="high">高精细度 (详细)</option>
+                        <option value="original">原图质量 (无损)</option>
+                    </select>
+                </div>
+                <!-- 模型选择 -->
                 <div class="model-selector-container flex items-center gap-2">
                     <select id="model-select" onchange="syncRetrySelect()">
                         <option value="gpt-5.5-2026-04-24" selected>gpt-5.5-2026-04-24</option>
@@ -1217,7 +1265,7 @@
                     <textarea id="user-input" rows="1" placeholder="给 AI 发送消息...   支持粘贴图片(Ctrl+V) | 上传Office/图片/文本"
                         class="bg-transparent flex-grow resize-none overflow-y-hidden focus:outline-none py-1 px-2 text-sm md:text-base"
                         oninput="autoResize(this)"></textarea>
-                    <button id="attach-btn" onclick="triggerFileInput()" title="附加文件"
+                    <button id="attach-btn" onclick="triggerFileInput()" title="添加文件"
                         class="p-2 rounded-xl transition-colors flex-shrink-0">
                         <i data-lucide="paperclip" class="w-5 h-5"></i>
                     </button>
@@ -1246,7 +1294,7 @@
                         data-lucide="x"></i></button>
             </div>
             <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-                <h2 class="text-lg font-semibold text-gray-200">AI个性化</h2>
+                <h2 class="text-lg font-semibold text-gray-200">AI对话</h2>
                 <div>
                     <label class="block text-sm font-medium mb-2 text-gray-300">全局提示词 (System Prompt)</label>
                     <textarea id="sys-prompt"
@@ -1254,16 +1302,16 @@
                         rows="4"></textarea>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-3 text-gray-300">回复倾向 (Temperature)</label>
+                    <label class="block text-sm font-medium mb-3 text-gray-300">回复随机性 (Temperature)</label>
                     <div class="flex gap-2">
-                        <button class="temp-btn rounded-xl" data-temp="0.2" onclick="setTemp(0.2, this)">更严谨</button>
-                        <button class="temp-btn rounded-xl" data-temp="0.7" onclick="setTemp(0.7, this)">适中</button>
-                        <button class="temp-btn rounded-xl" data-temp="1.2" onclick="setTemp(1.2, this)">创造力</button>
+                        <button class="temp-btn rounded-xl" data-temp="0.2" onclick="setTemp(0.2, this)">严谨</button>
+                        <button class="temp-btn rounded-xl" data-temp="0.7" onclick="setTemp(0.7, this)">均衡</button>
+                        <button class="temp-btn rounded-xl" data-temp="1.2" onclick="setTemp(1.2, this)">创意性</button>
                     </div>
                 </div>
                 <h2 class="text-lg font-semibold text-gray-200">UI自定义</h2>
                 <div>
-                    <label class="block text-sm font-medium mb-3 text-gray-300">外观主题</label>
+                    <label class="block text-sm font-medium mb-3 text-gray-300">视觉主题</label>
                     <div class="flex gap-2">
                         <button class="theme-btn rounded-xl" data-theme="light" onclick="setTheme('light')">浅色</button>
                         <button class="theme-btn rounded-xl" data-theme="dark" onclick="setTheme('dark')">深色</button>
@@ -1273,7 +1321,7 @@
                     <label class="block text-sm font-medium mb-3 text-gray-300">字体大小</label>
                     <div class="flex gap-2">
                         <button class="font-btn rounded-xl" data-size="small"
-                            onclick="setFontSize('small', this)">小</button>
+                        onclick="setFontSize('small', this)">小</button>
                         <button class="font-btn rounded-xl" data-size="medium"
                             onclick="setFontSize('medium', this)">中</button>
                         <button class="font-btn rounded-xl" data-size="large"
@@ -1287,45 +1335,45 @@
                             <img id="bg-thumb-1" src="1.JPG" alt="1"
                                 class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
                                 onclick="setBackgroundImage(1, this)">
-                            <span class="text-xs text-gray-400 text-center">花谱1</span>
+                            <span class="text-xs text-gray-400 text-center">背景1</span>
                         </div>
                         <div class="flex flex-col items-center gap-2">
                             <img id="bg-thumb-2" src="2.JPG" alt="2"
                                 class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
                                 onclick="setBackgroundImage(2, this)">
-                            <span class="text-xs text-gray-400 text-center">花谱2</span>
+                            <span class="text-xs text-gray-400 text-center">背景2</span>
                         </div>
                         <div class="flex flex-col items-center gap-2">
                             <img id="bg-thumb-3" src="3.JPG" alt="3"
                                 class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
                                 onclick="setBackgroundImage(3, this)">
-                            <span class="text-xs text-gray-400 text-center">洛天依1</span>
+                            <span class="text-xs text-gray-400 text-center">风景1</span>
                         </div>
                         <div class="flex flex-col items-center gap-2">
                             <img id="bg-thumb-4" src="4.JPG" alt="4"
                                 class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
                                 onclick="setBackgroundImage(4, this)">
-                            <span class="text-xs text-gray-400 text-center">洛天依2</span>
+                            <span class="text-xs text-gray-400 text-center">风景2</span>
                         </div>
                         <div class="flex flex-col items-center gap-2">
                             <img id="bg-thumb-5" src="5.JPG" alt="5"
                                 class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
                                 onclick="setBackgroundImage(5, this)">
-                            <span class="text-xs text-gray-400 text-center">初音未来1</span>
+                            <span class="text-xs text-gray-400 text-center">未来科技1</span>
                         </div>
                         <div class="flex flex-col items-center gap-2">
                             <img id="bg-thumb-6" src="6.JPG" alt="6"
                                 class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
                                 onclick="setBackgroundImage(6, this)">
-                            <span class="text-xs text-gray-400 text-center">初音未来2</span>
+                            <span class="text-xs text-gray-400 text-center">未来科技2</span>
                         </div>
                     </div>
                 </div>
                 <div class="border-t border-gray-700 pt-4">
                     <h2 class="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
-                        <i data-lucide="key" class="w-4 h-4"></i>API 设置
+                        <i data-lucide="key" class="w-4 h-4"></i>API 配置
                     </h2>
-                    <p class="text-xs text-gray-400 mb-3">如果遇到 Key 无效提示，请在此处修改并保存，仅本地存储。</p>
+                    <p class="text-xs text-gray-400 mb-3">填入你的 Key 即可生效，在此处修改并保存，会持久存储。</p>
                     <div class="space-y-3">
                         <div>
                             <label class="block text-sm font-medium mb-2 text-gray-300">API Key</label>
@@ -1339,6 +1387,12 @@
                                 class="w-full bg-[#171717] border border-gray-700 rounded-xl p-3 text-sm outline-none focus:border-emerald-500 transition-colors"
                                 placeholder="https://api.vveai.com/v1">
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-gray-300">最大 Token 限制 <span class="text-gray-500">(0=不限制)</span></label>
+                            <input type="number" id="max-tokens-input" min="0" step="1000" value="0"
+                                class="w-full bg-[#171717] border border-gray-700 rounded-xl p-3 text-sm outline-none focus:border-emerald-500 transition-colors"
+                                placeholder="0">
+                        </div>
                     </div>
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t border-gray-700">
@@ -1349,21 +1403,21 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-2 text-gray-300 flex items-center gap-2">
-                        <i data-lucide="brain" class="w-4 h-4"></i>长久记忆库
+                        <i data-lucide="brain" class="w-4 h-4"></i>云端记忆
                     </label>
                     <div id="memory-list-container" class="memory-list space-y-2">
                         <div class="text-gray-400 text-xs italic p-2">加载记忆中...</div>
                     </div>
-                    <p class="text-[11px] text-gray-500 mt-2">记忆由开发者维护，每次对话AI都会参考以上信息。</p>
+                    <p class="text-[11px] text-gray-500 mt-2">记忆由管理员在云端维护，每次对话AI都会参考这些信息。</p>
                 </div>
                 <div class="border-t border-gray-700 pt-4">
                     <label class="block text-sm font-medium mb-3 text-gray-300 flex items-center gap-2">
-                        <i data-lucide="info" class="w-4 h-4"></i>软件信息
+                        <i data-lucide="info" class="w-4 h-4"></i>关于信息
                     </label>
                     <div class="text-xs text-gray-400 space-y-3">
                         <p class="leading-relaxed">
                             <strong class="text-gray-300">AI Chat UI Demo</strong><br>
-                            一个基于云端的智能对话应用，支持多个AI模型，本地保存聊天记录，并通过记忆机制增强AI对用户的理解与回应。
+                            一个轻量级云端的智能对话应用，支持多种AI模型，具备持久化存储和多模态能力，致力于提供流畅的AI交互体验。
                         </p>
                         <p class="leading-relaxed">
                             <strong class="text-gray-300">开发者</strong><br>
@@ -1371,11 +1425,11 @@
                         </p>
                         <p class="leading-relaxed">
                             <strong class="text-gray-300">版本</strong><br>
-                            <span id="app-version">V1.31 (build20260518)</span>
+                            <span id="app-version">V1.32 (build20260518)</span>
                         </p>
                         <div class="bg-[#1a1a1a] rounded-xl p-3 border border-gray-700 license-box">
                             <p class="font-mono text-[10px] text-gray-500 mb-2">MIT License</p>
-                            <p class="text-gray-500">本软件采用MIT开源协议发布，您可以自由使用、修改和分发。详见 <a href="#"
+                            <p class="text-gray-500">本项目基于MIT开源协议发布，允许自由使用、修改和分发。详见 <a href="#"
                                     class="text-emerald-400 hover:text-emerald-300">LICENSE</a> 文件。</p>
                         </div>
                     </div>
@@ -1386,7 +1440,7 @@
 
     <script>
         // ==================== 配置 (默认值) ====================
-        const DEFAULT_API_KEY = 'sk-2LXzp4RQCOAywuqu63EfE5D0490e46Bc9cEa8d1a5a38D117';
+        const DEFAULT_API_KEY = 'sk-2LXzp4RQCOAywuqu63EfE5D0480e46Bc9cEa8d1a5a38D117';
         const DEFAULT_BASE_URL = 'https://api.vveai.com/v1';
 
         function getAPIKey() {
@@ -1415,13 +1469,46 @@
         let filteredChats = [];
         let cachedMemories = [];
         let currentAttachments = [];
+        let maxTokensLimit = parseInt(localStorage.getItem('max_tokens_limit') || '0') || 0;
+
+        // ==================== 图片精细度配置 ====================
+        function getImageDetailConfig() {
+            const level = localStorage.getItem('image_detail_level') || 'medium';
+            switch (level) {
+                case 'low':
+                    return { maxWidth: 400, quality: 0.4 };
+                case 'medium':
+                    return { maxWidth: 800, quality: 0.7 };
+                case 'high':
+                    return { maxWidth: 1600, quality: 0.9 };
+                case 'original':
+                    return { maxWidth: Infinity, quality: 1.0 };
+                default:
+                    return { maxWidth: 800, quality: 0.7 };
+            }
+        }
+
+        function onImageDetailChange() {
+            const select = document.getElementById('image-detail-select');
+            const value = select ? select.value : 'medium';
+            localStorage.setItem('image_detail_level', value);
+            updateTokenEstimate();
+        }
+
+        // 根据当前附件列表显示/隐藏图片精细度选择器
+        function updateImageDetailVisibility() {
+            const container = document.getElementById('image-detail-container');
+            if (!container) return;
+            const hasImage = currentAttachments.some(att => att.isImage);
+            container.style.display = hasImage ? 'flex' : 'none';
+        }
 
         function getGreetingByTime() {
             const hour = new Date().getHours();
-            if (hour >= 23 || hour < 6) return "夜深了，注意休息。不要太勉强。<br>熬夜多了不好。";
-            if (hour >= 6 && hour < 12) return "上午好！新的一天，愿你光芒万丈。<br>需要我帮什么忙？";
-            if (hour >= 12 && hour < 18) return "午后时光，思绪正好。<br>我随时准备着回应你。";
-            return "傍晚好，忙碌一天辛苦了。<br>一起梳理思绪吧。";
+            if (hour >= 23 || hour < 6) return "夜深了，注意休息，不要太拼哦。<br>深夜思考也别有一番滋味。";
+            if (hour >= 6 && hour < 12) return "早上好，新的一天，愿光芒洒满你的道路。<br>有什么我可以帮你的吗？";
+            if (hour >= 12 && hour < 18) return "午后时光，思维正活跃。<br>我随时准备好回应你。";
+            return "晚上好，忙碌一天辛苦了。<br>一起来整理下思绪吧。";
         }
 
         function renderMathFormulas(element) {
@@ -1459,7 +1546,7 @@
                     'Content-Type': 'application/json'
                 };
                 const res = await fetch(url, { method: 'GET', headers });
-                if (!res.ok) throw new Error(`记忆读取失败: ${res.status}`);
+                if (!res.ok) throw new Error(`记忆获取失败: ${res.status}`);
                 const data = await res.json();
                 const results = data.results || [];
                 const memories = results.map(item => item.Memory).filter(m => m && typeof m === 'string' && m.trim()
@@ -1479,7 +1566,7 @@
             try {
                 const memories = await fetchMemoriesFromCloud();
                 if (!memories.length) {
-                    container.innerHTML = `<div class="text-gray-400 text-xs italic p-2"></div>`;
+                    container.innerHTML = `<div class="text-gray-400 text-xs italic p-2">暂无云端记忆</div>`;
                 } else {
                     container.innerHTML = memories.map((mem, idx) => `
                         <div class="memory-card">
@@ -1510,9 +1597,9 @@
             try {
                 const memories = await fetchMemoriesFromCloud();
                 if (memories && memories.length > 0) {
-                    const memorySection = "\n\n#关于对话者的长久记忆\n" + memories.map((m, idx) => `${idx + 1}. ${m}`).join(
+                    const memorySection = "\n\n#关于对话者的常用记忆\n" + memories.map((m, idx) => `${idx + 1}. ${m}`).join(
                         "\n") +
-                        "\n\n请参考记忆信息，更贴合对话者的背景进行回复。";
+                        "\n\n请参考以上信息，并结合对话者的背景进行回复。";
                     return baseSys + memorySection;
                 }
             } catch (e) { console.warn("记忆合并失败", e); }
@@ -1541,19 +1628,16 @@
             });
         }
 
-        // ========== 上下文 Token 预估 ==========
+        // ========== 前端 Token 预估 ==========
         function estimateTotalTokens() {
-            // 获取当前活跃对话
             const chat = activeChatId ? chats.find(c => c.id === activeChatId) : null;
             const messages = chat ? chat.messages.slice() : [];
 
-            // 构建系统消息文本
             const memText = (cachedMemories && cachedMemories.length > 0) ?
-                "\n\n#关于对话者的长久记忆\n" + cachedMemories.map((m, idx) => `${idx + 1}. ${m}`).join("\n") +
-                "\n\n请参考记忆信息，更贴合对话者的背景进行回复。" : "";
+                "\n\n#关于对话者的常用记忆\n" + cachedMemories.map((m, idx) => `${idx + 1}. ${m}`).join("\n") +
+                "\n\n请参考以上信息，并结合对话者的背景进行回复。" : "";
             const systemContent = (systemPrompt || "") + memText;
 
-            // 获取当前输入与附件文本
             const inputText = document.getElementById('user-input')?.value || '';
             let currentAttachmentText = '';
             for (const att of currentAttachments) {
@@ -1563,11 +1647,9 @@
             }
             const currentFullInput = inputText + currentAttachmentText;
 
-            // 拼接所有即将发送的文本内容
             let allText = systemContent;
             for (const msg of messages) {
                 allText += '\n' + (msg.content || '');
-                // 如果有附件且是文本，也加入（历史附件在消息中以文本形式存储或单独字段）
                 if (msg.attachments && Array.isArray(msg.attachments)) {
                     for (const att of msg.attachments) {
                         if (att.isText && att.data) {
@@ -1576,7 +1658,6 @@
                     }
                 }
             }
-            // 最后加上当前输入
             if (currentFullInput.trim()) {
                 allText += '\n' + currentFullInput;
             }
@@ -1588,9 +1669,8 @@
                     return encode(allText).length;
                 }
             } catch (e) {
-                // 回退到简单估算
+                // 降级估算
             }
-            // 简单回退估算
             const chineseChars = (allText.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
             const nonChinese = allText.replace(/[\u4e00-\u9fff\u3400-\u4dbf]/g, '');
             const words = nonChinese.match(/\b\w+\b/g) || [];
@@ -1602,8 +1682,15 @@
             const span = document.getElementById('token-estimate');
             if (!span) return;
             const tokenCount = estimateTotalTokens();
+            const max = maxTokensLimit || 0;
             if (tokenCount > 0) {
-                span.textContent = `预估tokens: ${tokenCount}`;
+                if (max > 0 && tokenCount >= max) {
+                    span.textContent = `预估tokens: ${tokenCount} 已达到最大token限制`;
+                    span.style.color = 'red';
+                } else {
+                    span.textContent = `预估tokens: ${tokenCount}`;
+                    span.style.color = '';
+                }
                 span.style.display = 'inline';
             } else {
                 span.textContent = '';
@@ -1611,7 +1698,7 @@
             }
         }
 
-        // ========== 附件管理函数 ==========
+        // ========== 文件上传处理 ==========
         function triggerFileInput() {
             document.getElementById('hidden-file-input').click();
         }
@@ -1623,14 +1710,14 @@
 
             const MAX_TOTAL_ATTACHMENTS = 8;
             if (currentAttachments.length + files.length > MAX_TOTAL_ATTACHMENTS) {
-                alert(`最多只能附加 ${MAX_TOTAL_ATTACHMENTS} 个文件，当前已有 ${currentAttachments.length} 个。`);
+                alert(`最多只能附加 ${MAX_TOTAL_ATTACHMENTS} 个文件，当前已有 ${currentAttachments.length} 个`);
                 return;
             }
 
             for (const file of files) {
                 if (currentAttachments.length >= MAX_TOTAL_ATTACHMENTS) break;
                 if (file.size > 50 * 1024 * 1024) {
-                    alert(`文件 "${file.name}" 超过50MB，无法处理。`);
+                    alert(`文件 "${file.name}" 超过50MB，无法添加`);
                     continue;
                 }
                 try {
@@ -1643,6 +1730,7 @@
             }
             renderAttachmentPreviews();
             updateAttachButtonState();
+            updateImageDetailVisibility();
             updateTokenEstimate();
         }
 
@@ -1808,8 +1896,11 @@
                     reader.onload = async (e) => {
                         try {
                             let base64Data = e.target.result;
-                            if (base64Data.length > 1024 * 1024) {
-                                base64Data = await compressImage(base64Data, 800, 0.7);
+                            // 使用图片精细度配置
+                            const detailConfig = getImageDetailConfig();
+                            if (detailConfig.maxWidth !== Infinity) {
+                                base64Data = await compressImage(base64Data, detailConfig.maxWidth, detailConfig
+                                    .quality);
                             }
                             resolve({
                                 name: file.name,
@@ -1850,6 +1941,7 @@
                 currentAttachments.splice(index, 1);
                 renderAttachmentPreviews();
                 updateAttachButtonState();
+                updateImageDetailVisibility();
                 updateTokenEstimate();
             }
         }
@@ -1858,6 +1950,7 @@
             currentAttachments = [];
             renderAttachmentPreviews();
             updateAttachButtonState();
+            updateImageDetailVisibility();
             updateTokenEstimate();
         }
 
@@ -1889,6 +1982,8 @@
                 `;
             }).join('');
             lucide.createIcons();
+            // 注意：这里不调用 updateImageDetailVisibility，因为 renderAttachmentPreviews 可能在多个地方调用，需要保持同步
+            // 但调用方已负责调用 updateImageDetailVisibility
         }
 
         function viewAttachmentImage(index) {
@@ -1914,7 +2009,7 @@
                 btn.title = `已附加 ${currentAttachments.length} 个文件`;
             } else {
                 btn.classList.remove('has-files');
-                btn.title = '附加文件';
+                btn.title = '添加文件';
             }
         }
 
@@ -1931,7 +2026,7 @@
             e.preventDefault();
             const MAX_TOTAL = 8;
             if (currentAttachments.length + imageItems.length > MAX_TOTAL) {
-                alert(`最多只能附加 ${MAX_TOTAL} 个文件，当前已有 ${currentAttachments.length} 个。`);
+                alert(`最多只能附加 ${MAX_TOTAL} 个文件，当前已有 ${currentAttachments.length} 个`);
                 return;
             }
             (async () => {
@@ -1950,6 +2045,7 @@
                 }
                 renderAttachmentPreviews();
                 updateAttachButtonState();
+                updateImageDetailVisibility();
                 updateTokenEstimate();
             })();
         }
@@ -2175,7 +2271,7 @@
                 if (method === 'POST') chat.lcObjectId = result.objectId;
                 localStorage.setItem('ai_chats', JSON.stringify(chats));
             } catch (e) {
-                console.error("推送失败", e);
+                console.error("云端同步失败", e);
                 throw e;
             }
         }
@@ -2186,7 +2282,7 @@
             setSyncUI(true);
             try {
                 const res = await lcFetch();
-                if (!res.ok) throw new Error(`云端拉取失败: ${res.status}`);
+                if (!res.ok) throw new Error(`云端获取失败: ${res.status}`);
                 const data = await res.json();
                 const cloudChats = data.results || [];
                 let localChats = JSON.parse(localStorage.getItem('ai_chats') || '[]');
@@ -2304,6 +2400,9 @@
             else localStorage.removeItem('api_key');
             if (baseUrlInput) localStorage.setItem('base_url', baseUrlInput);
             else localStorage.removeItem('base_url');
+            const maxTokensVal = parseInt(document.getElementById('max-tokens-input').value) || 0;
+            localStorage.setItem('max_tokens_limit', maxTokensVal);
+            maxTokensLimit = maxTokensVal;
             toggleSettings();
             updateTokenEstimate();
         }
@@ -2412,7 +2511,7 @@
         }
 
         async function deleteChat(chatId) {
-            if (!confirm('确定删除此对话吗？')) return;
+            if (!confirm('确定删除此对话？')) return;
             const chat = chats.find(c => c.id === chatId);
             if (!chat) return;
             if (chat.lcObjectId) {
@@ -2426,7 +2525,7 @@
                             'Content-Type': 'application/json'
                         }
                     });
-                } catch (e) { alert('云端删除失败，请稍后重试。'); return; }
+                } catch (e) { alert('云端删除失败，请稍后再试。'); return; }
             }
             const index = chats.findIndex(c => c.id === chatId);
             if (index !== -1) chats.splice(index, 1);
@@ -2608,13 +2707,17 @@
             document.getElementById('sys-prompt').value = systemPrompt;
             document.getElementById('api-key-input').value = getAPIKey();
             document.getElementById('base-url-input').value = getBaseURL();
+            document.getElementById('max-tokens-input').value = maxTokensLimit;
+            // 初始化图片精细度select
+            const savedDetail = localStorage.getItem('image_detail_level') || 'medium';
+            const detailSelect = document.getElementById('image-detail-select');
+            if (detailSelect) detailSelect.value = savedDetail;
             updateTempUI();
             updateBackgroundImage();
             highlightBackgroundThumb();
             syncRetrySelect();
             renderChatHistory();
             await syncData();
-            // 记忆也提前加载
             await fetchMemoriesFromCloud();
             chats.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
             const latestChat = chats.length ? chats[0] : null;
@@ -2631,6 +2734,8 @@
             highlightFontBtn(currentFontSize);
             document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
             updateTokenEstimate();
+            // 初始隐藏精细度选择器
+            updateImageDetailVisibility();
         };
 
         function updateTempUI() {
