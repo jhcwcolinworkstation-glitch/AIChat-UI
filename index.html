@@ -1335,37 +1335,37 @@
                             <img id="bg-thumb-1" src="1.JPG" alt="1"
                                 class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
                                 onclick="setBackgroundImage(1, this)">
-                            <span class="text-xs text-gray-400 text-center">背景1</span>
+                            <span class="text-xs text-gray-400 text-center">1</span>
                         </div>
                         <div class="flex flex-col items-center gap-2">
                             <img id="bg-thumb-2" src="2.JPG" alt="2"
                                 class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
                                 onclick="setBackgroundImage(2, this)">
-                            <span class="text-xs text-gray-400 text-center">背景2</span>
+                            <span class="text-xs text-gray-400 text-center">2</span>
                         </div>
                         <div class="flex flex-col items-center gap-2">
                             <img id="bg-thumb-3" src="3.JPG" alt="3"
                                 class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
                                 onclick="setBackgroundImage(3, this)">
-                            <span class="text-xs text-gray-400 text-center">风景1</span>
+                            <span class="text-xs text-gray-400 text-center">3</span>
                         </div>
                         <div class="flex flex-col items-center gap-2">
                             <img id="bg-thumb-4" src="4.JPG" alt="4"
                                 class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
                                 onclick="setBackgroundImage(4, this)">
-                            <span class="text-xs text-gray-400 text-center">风景2</span>
+                            <span class="text-xs text-gray-400 text-center">4</span>
                         </div>
                         <div class="flex flex-col items-center gap-2">
                             <img id="bg-thumb-5" src="5.JPG" alt="5"
                                 class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
                                 onclick="setBackgroundImage(5, this)">
-                            <span class="text-xs text-gray-400 text-center">未来科技1</span>
+                            <span class="text-xs text-gray-400 text-center">5</span>
                         </div>
                         <div class="flex flex-col items-center gap-2">
                             <img id="bg-thumb-6" src="6.JPG" alt="6"
                                 class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
                                 onclick="setBackgroundImage(6, this)">
-                            <span class="text-xs text-gray-400 text-center">未来科技2</span>
+                            <span class="text-xs text-gray-400 text-center">6</span>
                         </div>
                     </div>
                 </div>
@@ -1425,7 +1425,7 @@
                         </p>
                         <p class="leading-relaxed">
                             <strong class="text-gray-300">版本</strong><br>
-                            <span id="app-version">V1.32 (build20260518)</span>
+                            <span id="app-version">V1.32 (build20260523)</span>
                         </p>
                         <div class="bg-[#1a1a1a] rounded-xl p-3 border border-gray-700 license-box">
                             <p class="font-mono text-[10px] text-gray-500 mb-2">MIT License</p>
@@ -1440,7 +1440,7 @@
 
     <script>
         // ==================== 配置 (默认值) ====================
-        const DEFAULT_API_KEY = 'sk-';
+        const DEFAULT_API_KEY = '';
         const DEFAULT_BASE_URL = 'https://api.vveai.com/v1';
 
         function getAPIKey() {
@@ -1455,7 +1455,7 @@
             id: '',
             key: '',
             masterKey: '',
-            base: ''
+            base: 'https://g2jnexxd.lc-cn-n1-shared.com/1.1/classes/AIChats'
         };
 
         let chats = JSON.parse(localStorage.getItem('ai_chats') || '[]');
