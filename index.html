@@ -21,18 +21,19 @@
     <script src="pptxtojson.js"></script>
     <script src="xlsx.min.js">
     </script>
-    <!-- Token 编码器 -->
-    <script src="https://cdn.jsdelivr.net/npm/gpt-3-encoder@1.1.4/dist/gpt-3-encoder.min.js">
+    <link rel="stylesheet" href="codemirror.min.css">
+    <link rel="stylesheet" href="material-darker.min.css">
+    <script src="codemirror.min.js">
+    </script>
+    <script src="javascript.min.js">
     </script>
     <style>
-        /* ========== 全局背景 & 液态玻璃效果 (叠加图片背景/透明层) ========== */
         body {
             transition: background 0.2s ease;
             margin: 0;
             min-height: 100vh;
         }
 
-        /* ----- 浅色模式：亮底叠加层，确保图片可见度 ----- */
         body.theme-light {
             background: linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6)), url('1.JPG') center/cover fixed;
             color: #1f1f1f;
@@ -143,7 +144,8 @@
 
         body.theme-light .temp-btn,
         body.theme-light .font-btn,
-        body.theme-light .theme-btn {
+        body.theme-light .theme-btn,
+        body.theme-light .code-size-btn {
             background: rgba(200, 200, 200, 0.3);
             border: 1px solid rgba(100, 100, 100, 0.3);
             color: #2a2a2a;
@@ -151,7 +153,8 @@
 
         body.theme-light #settings-modal .temp-btn,
         body.theme-light #settings-modal .font-btn,
-        body.theme-light #settings-modal .theme-btn {
+        body.theme-light #settings-modal .theme-btn,
+        body.theme-light #settings-modal .code-size-btn {
             background: rgba(220, 220, 220, 0.5);
             border: 1px solid rgba(100, 100, 100, 0.4);
             color: #2a2a2a;
@@ -159,7 +162,8 @@
 
         body.theme-light .temp-btn.active,
         body.theme-light .font-btn.active,
-        body.theme-light .theme-btn.active {
+        body.theme-light .theme-btn.active,
+        body.theme-light .code-size-btn.active {
             background: #10b981;
             border-color: #10b981;
             color: white;
@@ -238,7 +242,6 @@
             color: #4a4a4a !important;
         }
 
-        /* ----- 深色模式 ----- */
         body.theme-dark {
             background: linear-gradient(145deg, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.6)), url('1.JPG') center/cover fixed;
             color: #f0f0f0;
@@ -340,7 +343,8 @@
 
         body.theme-dark .temp-btn,
         body.theme-dark .font-btn,
-        body.theme-dark .theme-btn {
+        body.theme-dark .theme-btn,
+        body.theme-dark .code-size-btn {
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: #ddd;
@@ -348,7 +352,8 @@
 
         body.theme-dark .temp-btn.active,
         body.theme-dark .font-btn.active,
-        body.theme-dark .theme-btn.active {
+        body.theme-dark .theme-btn.active,
+        body.theme-dark .code-size-btn.active {
             background: #10b981;
             border-color: #10b981;
             color: white;
@@ -359,7 +364,6 @@
             border-left: 3px solid #10b981;
         }
 
-        /* ========== 全局悬停：禁止放大 ========== */
         button:hover,
         .action-btn:hover,
         .sidebar button:hover,
@@ -369,6 +373,7 @@
         .temp-btn:hover,
         .font-btn:hover,
         .theme-btn:hover,
+        .code-size-btn:hover,
         select:hover,
         .model-selector-container select:hover,
         .delete-chat-btn:hover,
@@ -380,7 +385,6 @@
             transform: none !important;
         }
 
-        /* ========== 响应式侧栏 ========== */
         .sidebar {
             width: 260px;
             transition: transform 0.3s ease;
@@ -579,7 +583,8 @@
 
         .temp-btn,
         .font-btn,
-        .theme-btn {
+        .theme-btn,
+        .code-size-btn {
             flex: 1;
             padding: 0.5rem;
             text-align: center;
@@ -1076,21 +1081,204 @@
             background: rgba(16, 185, 129, 0.2);
         }
 
-        /* token 预估显示样式 */
         #token-estimate {
             font-variant-numeric: tabular-nums;
             transition: color 0.2s;
         }
 
-        /* 图片精细度容器 - 默认隐藏，有图片附件时显示 */
         #image-detail-container {
             display: none;
+        }
+
+        /* Canvas 面板样式 */
+        #canvas-panel {
+            display: none;
+            flex: 1 1 50%;
+            min-width: 300px;
+            flex-direction: column;
+            margin: 0.6rem;
+            border-radius: 0.85rem;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(22, 22, 28, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        #canvas-panel.visible {
+            display: flex;
+        }
+
+        body.theme-light #canvas-panel {
+            background: rgba(245, 245, 250, 0.92) !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+        }
+
+        #canvas-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 0.9rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            flex-shrink: 0;
+            gap: 0.5rem;
+        }
+
+        body.theme-light #canvas-panel-header {
+            border-bottom-color: rgba(0, 0, 0, 0.06) !important;
+        }
+
+        #canvas-panel-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-grow: 1;
+        }
+
+        body.theme-light #canvas-panel-title {
+            color: #333;
+        }
+
+        #canvas-close-btn,
+        #canvas-copy-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.3rem 0.5rem;
+            cursor: pointer;
+            color: #999;
+            transition: all 0.2s;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        #canvas-close-btn:hover,
+        #canvas-copy-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        body.theme-light #canvas-close-btn,
+        body.theme-light #canvas-copy-btn {
+            background: rgba(0, 0, 0, 0.06);
+            color: #555;
+        }
+
+        body.theme-light #canvas-close-btn:hover,
+        body.theme-light #canvas-copy-btn:hover {
+            background: rgba(0, 0, 0, 0.12);
+            color: #111;
+        }
+
+        #canvas-codemirror {
+            flex-grow: 1;
+            overflow: hidden;
+            overscroll-behavior: none;
+        }
+
+        .CodeMirror {
+            height: 100% !important;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace !important;
+        }
+
+        /* 修改行背景色 */
+        .canvas-modified-line {
+            background-color: rgba(16, 185, 129, 0.2) !important;
+        }
+
+        #canvas-status {
+            font-size: 0.65rem;
+            color: #777;
+            padding: 0.3rem 0.8rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            flex-shrink: 0;
+            text-align: right;
+        }
+
+        body.theme-light #canvas-status {
+            border-top-color: rgba(0, 0, 0, 0.08);
+            color: #888;
+        }
+
+        @media (max-width: 768px) {
+            #canvas-panel {
+                position: fixed;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                width: 85vw !important;
+                max-width: 420px;
+                z-index: 60;
+                margin: 0;
+                border-radius: 0;
+                box-shadow: -4px 0 30px rgba(0, 0, 0, 0.5);
+            }
+
+            #canvas-panel:not(.visible) {
+                display: none;
+            }
+        }
+
+        #canvas-toggle-btn {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #10b981;
+            flex-shrink: 0;
+        }
+
+        #canvas-toggle-btn.visible {
+            display: flex;
+        }
+
+        #canvas-toggle-btn:hover {
+            background: rgba(16, 185, 129, 0.35);
+            filter: brightness(1.05);
+        }
+
+        body.theme-light #canvas-toggle-btn {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.5);
+            color: #059669;
+        }
+
+        body.theme-light #canvas-toggle-btn:hover {
+            background: rgba(16, 185, 129, 0.25);
+        }
+
+        .canvas-replace-notice {
+            color: #9ca3af;
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: block;
+            margin: 0.5rem 0;
+            padding-left: 0.5rem;
+            border-left: 3px solid #10b981;
+            opacity: 0.9;
+        }
+
+        body.theme-light .canvas-replace-notice {
+            color: #555;
         }
     </style>
 </head>
 
 <body class="h-screen flex overflow-hidden theme-light font-size-medium" onclick="closeRetryMenu(event)">
-    <!-- 侧栏 & 遮罩层 -->
     <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
     <aside id="sidebar" class="sidebar h-full flex flex-col p-3 flex-shrink-0">
         <button onclick="createNewChat()"
@@ -1113,1650 +1301,1545 @@
             </button>
         </div>
     </aside>
-    <!-- 主聊天区 -->
     <main class="flex-grow flex flex-col relative chat-container w-full min-w-0">
         <header class="p-3 flex items-center border-b border-gray-800 bg-[#212121] z-10">
             <button onclick="toggleSidebar(true)" class="md:hidden p-2 hover:bg-gray-800 rounded-xl mr-2"><i
                     data-lucide="menu"></i></button>
             <div id="active-chat-title" class="flex-grow text-center font-medium text-gray-200 truncate px-4">新对话</div>
+            <button id="canvas-toggle-btn" onclick="toggleCanvasPanel()" title="切换Canvas面板">
+                <i data-lucide="code-2" class="w-3.5 h-3.5"></i> Canvas
+            </button>
             <div id="sync-status" class="hidden flex items-center gap-2 pr-2">
                 <span class="sync-dot"></span><span class="text-[10px] text-emerald-400 font-bold uppercase">同步中</span>
             </div>
         </header>
-        <div id="messages-wrapper" class="flex-grow overflow-y-auto p-4 md:p-8 space-y-10 no-scrollbar scroll-smooth">
+        <div style="display:flex; flex-grow:1; overflow:hidden;">
+            <div id="messages-wrapper" class="flex-grow overflow-y-auto p-4 md:p-8 space-y-10 no-scrollbar scroll-smooth"
+            style="flex:1 1 50%; min-width:0;">
         </div>
-        <!-- 重试弹窗 -->
-        <div id="retry-popover" class="hidden" onclick="event.stopPropagation()">
-            <span class="text-[10px] text-gray-400 px-2 pt-1 font-bold uppercase tracking-wider">选择模型并重试</span>
-            <div class="flex gap-1 mt-1">
-                <select id="retry-model-select"
-                    class="bg-[#171717] border border-gray-700 rounded-xl p-1.5 text-xs flex-grow outline-none text-white"></select>
-                <button onclick="confirmRetry()"
-                    class="bg-white text-black px-2 rounded-xl hover:bg-gray-200 transition-colors">
-                    <i data-lucide="check" class="w-4 h-4"></i>
+        <div id="canvas-panel" class="overscroll-none">
+            <div id="canvas-panel-header">
+                <span id="canvas-panel-title">
+                    <i data-lucide="code-2" class="w-4 h-4 text-emerald-400"></i> Canvas 编辑器
+                </span>
+                <button id="canvas-copy-btn" onclick="copyCanvasCode()" title="复制全部代码">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制
+                </button>
+                <button id="canvas-close-btn" onclick="toggleCanvasPanel()" title="关闭Canvas面板">
+                    <i data-lucide="x" class="w-3 h-3"></i>
+                </button>
+            </div>
+            <div id="canvas-codemirror"></div>
+            <div id="canvas-status">行数: 1 | 编码模式</div>
+        </div>
+    </div>
+    <div id="retry-popover" class="hidden" onclick="event.stopPropagation()">
+        <span class="text-[10px] text-gray-400 px-2 pt-1 font-bold uppercase tracking-wider">选择模型并重试</span>
+        <div class="flex gap-1 mt-1">
+            <select id="retry-model-select"
+                class="bg-[#171717] border border-gray-700 rounded-xl p-1.5 text-xs flex-grow outline-none text-white"></select>
+            <button onclick="confirmRetry()"
+                class="bg-white text-black px-2 rounded-xl hover:bg-gray-200 transition-colors">
+                <i data-lucide="check" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+    <div id="image-lightbox" class="image-lightbox hidden" onclick="closeLightbox()">
+        <img id="lightbox-img" src="" alt="查看大图">
+    </div>
+    <footer id="input-footer" class="p-4 md:pb-8 w-full">
+        <div class="max-w-4xl mx-auto relative flex flex-col items-start">
+            <div id="attachments-preview" class="w-full"></div>
+            <div id="image-detail-container" class="flex items-center gap-2 mb-1.5 w-full">
+                <span class="text-[11px] text-gray-400 font-medium whitespace-nowrap select-none">图片精细度</span>
+                <select id="image-detail-select" onchange="onImageDetailChange()">
+                    <option value="low">低精细度 (快速)</option>
+                    <option value="medium" selected>中等精细度 (均衡)</option>
+                    <option value="high">高精细度 (详细)</option>
+                    <option value="original">原图质量 (无损)</option>
+                </select>
+            </div>
+            <div class="model-selector-container flex items-center gap-2">
+                <select id="model-select" onchange="syncRetrySelect()">
+                    <option value="gpt-5.5-2026-04-24" selected>gpt-5.5-2026-04-24</option>
+                    <option value="gpt-5.5">gpt-5.5</option>
+                    <option value="DeepSeek-OCR-2">DeepSeek-OCR-2</option>
+                    <option value="DeepSeek-V4-Flash">DeepSeek-V4-Flash</option>
+                    <option value="DeepSeek-V4-Pro">DeepSeek-V4-Pro</option>
+                    <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+                    <option value="claude-opus-4-7">claude-opus-4-7</option>
+                    <option value="claude-opus-4-7-low">claude-opus-4-7-low</option>
+                    <option value="claude-opus-4-7-minimal">claude-opus-4-7-minimal</option>
+                    <option value="claude-opus-4-7-medium">claude-opus-4-7-medium</option>
+                    <option value="claude-opus-4-7-max">claude-opus-4-7-max</option>
+                    <option value="claude-opus-4-7-high">claude-opus-4-7-high</option>
+                    <option value="claude-opus-4-7-xhigh">claude-opus-4-7-xhigh</option>
+                    <option value="qwen3.6-plus">qwen3.6-plus</option>
+                    <option value="qwen3.6-plus-search">qwen3.6-plus-search</option>
+                    <option value="MiniMax-M2.7">MiniMax-M2.7</option>
+                    <option value="gpt-5.4-nano-2026-03-17">gpt-5.4-nano-2026-03-17</option>
+                    <option value="gpt-5.4-nano">gpt-5.4-nano</option>
+                    <option value="gpt-5.4-nano-low">gpt-5.4-nano-low</option>
+                    <option value="gpt-5.4-nano-medium">gpt-5.4-nano-medium</option>
+                    <option value="gpt-5.4-nano-high">gpt-5.4-nano-high</option>
+                    <option value="gpt-5.4-nano-xhigh">gpt-5.4-nano-xhigh</option>
+                    <option value="gpt-5.4-mini">gpt-5.4-mini</option>
+                    <option value="gpt-5.4-mini-low">gpt-5.4-mini-low</option>
+                    <option value="gpt-5.4-mini-medium">gpt-5.4-mini-medium</option>
+                    <option value="gpt-5.4-mini-high">gpt-5.4-mini-high</option>
+                    <option value="gpt-5.4-mini-xhigh">gpt-5.4-mini-xhigh</option>
+                    <option value="gpt-5.4-mini-2026-03-17">gpt-5.4-mini-2026-03-17</option>
+                    <option value="gpt-5.4-2026-03-05">gpt-5.4-2026-03-05</option>
+                    <option value="gpt-5.4">gpt-5.4</option>
+                    <option value="gpt-5.4-pro">gpt-5.4-pro</option>
+                    <option value="gpt-5.4-pro-2026-03-05">gpt-5.4-pro-2026-03-05</option>
+                    <option value="gpt-5.4-low">gpt-5.4-low</option>
+                    <option value="gpt-5.4-medium">gpt-5.4-medium</option>
+                    <option value="gpt-5.4-high">gpt-5.4-high</option>
+                    <option value="gpt-5.4-xhigh">gpt-5.4-xhigh</option>
+                    <option value="gemini-3.1-flash-lite-preview">gemini-3.1-flash-lite-preview</option>
+                    <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview</option>
+                    <option value="gemini-3.1-pro-preview-thinking">gemini-3.1-pro-preview-thinking</option>
+                    <option value="gemini-3.1-pro-preview-search">gemini-3.1-pro-preview-search</option>
+                    <option value="gemini-3.1-pro-preview-high">gemini-3.1-pro-preview-high</option>
+                    <option value="gemini-3.1-pro-preview-low">gemini-3.1-pro-preview-low</option>
+                    <option value="gemini-3.1-pro-preview-thinking-*">gemini-3.1-pro-preview-thinking-*</option>
+                    <option value="claude-sonnet-4-6-thinking">claude-sonnet-4-6-thinking</option>
+                    <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
+                    <option value="claude-sonnet-4-6-high">claude-sonnet-4-6-high</option>
+                    <option value="claude-sonnet-4-6-low">claude-sonnet-4-6-low</option>
+                    <option value="claude-sonnet-4-6-max">claude-sonnet-4-6-max</option>
+                    <option value="claude-sonnet-4-6-medium">claude-sonnet-4-6-medium</option>
+                    <option value="grok-4.2">grok-4.2</option>
+                    <option value="qwen3.5-35b-a3b">qwen3.5-35b-a3b</option>
+                    <option value="qwen3.5-27b">qwen3.5-27b</option>
+                    <option value="qwen3.5-plus">qwen3.5-plus</option>
+                    <option value="qwen3.5-flash">qwen3.5-flash</option>
+                    <option value="qwen3.5-122b-a10b">qwen3.5-122b-a10b</option>
+                    <option value="qwen3.5-397b-a17b">qwen3.5-397b-a17b</option>
+                    <option value="qwen3.5-flash-search">qwen3.5-flash-search</option>
+                    <option value="qwen3.5-plus-search">qwen3.5-plus-search</option>
+                    <option value="MiniMax-M2.5">MiniMax-M2.5</option>
+                    <option value="glm-5">glm-5</option>
+                    <option value="GLM-5">GLM-5</option>
+                    <option value="claude-opus-4-6">claude-opus-4-6</option>
+                    <option value="claude-opus-4-6-thinking">claude-opus-4-6-thinking</option>
+                    <option value="gpt-5.3-codex">gpt-5.3-codex</option>
+                    <option value="claude-opus-4-6-low">claude-opus-4-6-low</option>
+                    <option value="claude-opus-4-6-medium">claude-opus-4-6-medium</option>
+                    <option value="claude-opus-4-6-high">claude-opus-4-6-high</option>
+                    <option value="claude-opus-4-6-max">claude-opus-4-6-max</option>
+                    <option value="gpt-5.3-chat-latest">gpt-5.3-chat-latest</option>
+                    <option value="kimi-k2.5">kimi-k2.5</option>
+                    <option value="doubao-seed-1-8-251228">doubao-seed-1-8-251228</option>
+                    <option value="MiniMax-M2.1">MiniMax-M2.1</option>
+                    <option value="glm-4.7">glm-4.7</option>
+                    <option value="GLM-4.7">GLM-4.7</option>
+                    <option value="qwen3-vl-plus">qwen3-vl-plus</option>
+                    <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
+                    <option value="gemini-3-flash-preview-nothinking">gemini-3-flash-preview-nothinking</option>
+                    <option value="gemini-3-flash-preview-search">gemini-3-flash-preview-search</option>
+                    <option value="gemini-3-flash-preview-thinking">gemini-3-flash-preview-thinking</option>
+                    <option value="gemini-3-flash-preview-thinking-*">gemini-3-flash-preview-thinking-*</option>
+                    <option value="gpt-5.2-codex">gpt-5.2-codex</option>
+                    <option value="gpt-5.2-codex-high">gpt-5.2-codex-high</option>
+                    <option value="gpt-5.2-codex-low">gpt-5.2-codex-low</option>
+                    <option value="gpt-5.2-codex-medium">gpt-5.2-codex-medium</option>
+                    <option value="gpt-5.2">gpt-5.2</option>
+                    <option value="gpt-5.2-2025-12-11">gpt-5.2-2025-12-11</option>
+                    <option value="gpt-5.2-chat-latest">gpt-5.2-chat-latest</option>
+                    <option value="gpt-5.2-pro">gpt-5.2-pro</option>
+                    <option value="gpt-5.2-pro-2025-12-11">gpt-5.2-pro-2025-12-11</option>
+                    <option value="gpt-5.2-medium">gpt-5.2-medium</option>
+                    <option value="gpt-5.2-high">gpt-5.2-high</option>
+                    <option value="deepseek-v3.2">deepseek-v3.2</option>
+                    <option value="deepseek-v3.2-thinking">deepseek-v3.2-thinking</option>
+                    <option value="gemini-3-pro-preview">gemini-3-pro-preview</option>
+                    <option value="gemini-3-pro-preview-low">gemini-3-pro-preview-low</option>
+                    <option value="gemini-3-pro-preview-search">gemini-3-pro-preview-search</option>
+                    <option value="gemini-3-pro-preview-thinking">gemini-3-pro-preview-thinking</option>
+                    <option value="gemini-3-pro-preview-thinking-*">gemini-3-pro-preview-thinking-*</option>
+                </select>
+                <span id="token-estimate" class="text-xs text-gray-400 ml-2 whitespace-nowrap"></span>
+            </div>
+            <div class="input-area p-3 flex items-end gap-2 w-full shadow-lg">
+                <textarea id="user-input" rows="1" placeholder="给 AI 发送消息...   支持粘贴图片(Ctrl+V) | 上传Office/图片/文本 | /canvas 编码模式"
+                    class="bg-transparent flex-grow resize-none overflow-y-hidden focus:outline-none py-1 px-2 text-sm md:text-base"
+                oninput="autoResize(this)"></textarea>
+                <button id="attach-btn" onclick="triggerFileInput()" title="添加文件"
+                    class="p-2 rounded-xl transition-colors flex-shrink-0">
+                    <i data-lucide="paperclip" class="w-5 h-5"></i>
+                </button>
+                <input type="file" id="hidden-file-input"
+                    accept="image/*,.txt,.md,.json,.csv,.py,.js,.html,.css,.xml,.yaml,.yml,.log,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+                    multiple hidden onchange="handleFileSelect(event)">
+                <button id="send-btn" onclick="sendMessage()"
+                    class="bg-white text-black p-2 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 flex-shrink-0">
+                    <i data-lucide="arrow-up" class="w-5 h-5"></i>
+                </button>
+                <button id="stop-btn" onclick="stopGeneration()"
+                    class="bg-white text-black p-2 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 hidden flex-shrink-0">
+                    <i data-lucide="square" class="w-5 h-5"></i>
                 </button>
             </div>
         </div>
-        <!-- 图片灯箱 -->
-        <div id="image-lightbox" class="image-lightbox hidden" onclick="closeLightbox()">
-            <img id="lightbox-img" src="" alt="查看大图">
-        </div>
-        <!-- 底部输入区 -->
-        <footer id="input-footer" class="p-4 md:pb-8 w-full">
-            <div class="max-w-4xl mx-auto relative flex flex-col items-start">
-                <!-- 附件预览区 -->
-                <div id="attachments-preview" class="w-full"></div>
-                <!-- 图片识别精细度选择 (仅当有图片附件时显示) -->
-                <div id="image-detail-container" class="flex items-center gap-2 mb-1.5 w-full">
-                    <span class="text-[11px] text-gray-400 font-medium whitespace-nowrap select-none">图片精细度</span>
-                    <select id="image-detail-select" onchange="onImageDetailChange()">
-                        <option value="low">低精细度 (快速)</option>
-                        <option value="medium" selected>中等精细度 (均衡)</option>
-                        <option value="high">高精细度 (详细)</option>
-                        <option value="original">原图质量 (无损)</option>
-                    </select>
-                </div>
-                <!-- 模型选择 -->
-                <div class="model-selector-container flex items-center gap-2">
-                    <select id="model-select" onchange="syncRetrySelect()">
-                        <option value="gpt-5.5-2026-04-24" selected>gpt-5.5-2026-04-24</option>
-                        <option value="gpt-5.5">gpt-5.5</option>
-                        <option value="DeepSeek-OCR-2">DeepSeek-OCR-2</option>
-                        <option value="DeepSeek-V4-Flash">DeepSeek-V4-Flash</option>
-                        <option value="DeepSeek-V4-Pro">DeepSeek-V4-Pro</option>
-                        <option value="deepseek-v4-flash">deepseek-v4-flash</option>
-                        <option value="claude-opus-4-7">claude-opus-4-7</option>
-                        <option value="claude-opus-4-7-low">claude-opus-4-7-low</option>
-                        <option value="claude-opus-4-7-minimal">claude-opus-4-7-minimal</option>
-                        <option value="claude-opus-4-7-medium">claude-opus-4-7-medium</option>
-                        <option value="claude-opus-4-7-max">claude-opus-4-7-max</option>
-                        <option value="claude-opus-4-7-high">claude-opus-4-7-high</option>
-                        <option value="claude-opus-4-7-xhigh">claude-opus-4-7-xhigh</option>
-                        <option value="qwen3.6-plus">qwen3.6-plus</option>
-                        <option value="qwen3.6-plus-search">qwen3.6-plus-search</option>
-                        <option value="MiniMax-M2.7">MiniMax-M2.7</option>
-                        <option value="gpt-5.4-nano-2026-03-17">gpt-5.4-nano-2026-03-17</option>
-                        <option value="gpt-5.4-nano">gpt-5.4-nano</option>
-                        <option value="gpt-5.4-nano-low">gpt-5.4-nano-low</option>
-                        <option value="gpt-5.4-nano-medium">gpt-5.4-nano-medium</option>
-                        <option value="gpt-5.4-nano-high">gpt-5.4-nano-high</option>
-                        <option value="gpt-5.4-nano-xhigh">gpt-5.4-nano-xhigh</option>
-                        <option value="gpt-5.4-mini">gpt-5.4-mini</option>
-                        <option value="gpt-5.4-mini-low">gpt-5.4-mini-low</option>
-                        <option value="gpt-5.4-mini-medium">gpt-5.4-mini-medium</option>
-                        <option value="gpt-5.4-mini-high">gpt-5.4-mini-high</option>
-                        <option value="gpt-5.4-mini-xhigh">gpt-5.4-mini-xhigh</option>
-                        <option value="gpt-5.4-mini-2026-03-17">gpt-5.4-mini-2026-03-17</option>
-                        <option value="gpt-5.4-2026-03-05">gpt-5.4-2026-03-05</option>
-                        <option value="gpt-5.4">gpt-5.4</option>
-                        <option value="gpt-5.4-pro">gpt-5.4-pro</option>
-                        <option value="gpt-5.4-pro-2026-03-05">gpt-5.4-pro-2026-03-05</option>
-                        <option value="gpt-5.4-low">gpt-5.4-low</option>
-                        <option value="gpt-5.4-medium">gpt-5.4-medium</option>
-                        <option value="gpt-5.4-high">gpt-5.4-high</option>
-                        <option value="gpt-5.4-xhigh">gpt-5.4-xhigh</option>
-                        <option value="gemini-3.1-flash-lite-preview">gemini-3.1-flash-lite-preview</option>
-                        <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview</option>
-                        <option value="gemini-3.1-pro-preview-thinking">gemini-3.1-pro-preview-thinking</option>
-                        <option value="gemini-3.1-pro-preview-search">gemini-3.1-pro-preview-search</option>
-                        <option value="gemini-3.1-pro-preview-high">gemini-3.1-pro-preview-high</option>
-                        <option value="gemini-3.1-pro-preview-low">gemini-3.1-pro-preview-low</option>
-                        <option value="gemini-3.1-pro-preview-thinking-*">gemini-3.1-pro-preview-thinking-*</option>
-                        <option value="claude-sonnet-4-6-thinking">claude-sonnet-4-6-thinking</option>
-                        <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
-                        <option value="claude-sonnet-4-6-high">claude-sonnet-4-6-high</option>
-                        <option value="claude-sonnet-4-6-low">claude-sonnet-4-6-low</option>
-                        <option value="claude-sonnet-4-6-max">claude-sonnet-4-6-max</option>
-                        <option value="claude-sonnet-4-6-medium">claude-sonnet-4-6-medium</option>
-                        <option value="grok-4.2">grok-4.2</option>
-                        <option value="qwen3.5-35b-a3b">qwen3.5-35b-a3b</option>
-                        <option value="qwen3.5-27b">qwen3.5-27b</option>
-                        <option value="qwen3.5-plus">qwen3.5-plus</option>
-                        <option value="qwen3.5-flash">qwen3.5-flash</option>
-                        <option value="qwen3.5-122b-a10b">qwen3.5-122b-a10b</option>
-                        <option value="qwen3.5-397b-a17b">qwen3.5-397b-a17b</option>
-                        <option value="qwen3.5-flash-search">qwen3.5-flash-search</option>
-                        <option value="qwen3.5-plus-search">qwen3.5-plus-search</option>
-                        <option value="MiniMax-M2.5">MiniMax-M2.5</option>
-                        <option value="glm-5">glm-5</option>
-                        <option value="GLM-5">GLM-5</option>
-                        <option value="claude-opus-4-6">claude-opus-4-6</option>
-                        <option value="claude-opus-4-6-thinking">claude-opus-4-6-thinking</option>
-                        <option value="gpt-5.3-codex">gpt-5.3-codex</option>
-                        <option value="claude-opus-4-6-low">claude-opus-4-6-low</option>
-                        <option value="claude-opus-4-6-medium">claude-opus-4-6-medium</option>
-                        <option value="claude-opus-4-6-high">claude-opus-4-6-high</option>
-                        <option value="claude-opus-4-6-max">claude-opus-4-6-max</option>
-                        <option value="gpt-5.3-chat-latest">gpt-5.3-chat-latest</option>
-                        <option value="kimi-k2.5">kimi-k2.5</option>
-                        <option value="doubao-seed-1-8-251228">doubao-seed-1-8-251228</option>
-                        <option value="MiniMax-M2.1">MiniMax-M2.1</option>
-                        <option value="glm-4.7">glm-4.7</option>
-                        <option value="GLM-4.7">GLM-4.7</option>
-                        <option value="qwen3-vl-plus">qwen3-vl-plus</option>
-                        <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
-                        <option value="gemini-3-flash-preview-nothinking">gemini-3-flash-preview-nothinking</option>
-                        <option value="gemini-3-flash-preview-search">gemini-3-flash-preview-search</option>
-                        <option value="gemini-3-flash-preview-thinking">gemini-3-flash-preview-thinking</option>
-                        <option value="gemini-3-flash-preview-thinking-*">gemini-3-flash-preview-thinking-*</option>
-                        <option value="gpt-5.2-codex">gpt-5.2-codex</option>
-                        <option value="gpt-5.2-codex-high">gpt-5.2-codex-high</option>
-                        <option value="gpt-5.2-codex-low">gpt-5.2-codex-low</option>
-                        <option value="gpt-5.2-codex-medium">gpt-5.2-codex-medium</option>
-                        <option value="gpt-5.2">gpt-5.2</option>
-                        <option value="gpt-5.2-2025-12-11">gpt-5.2-2025-12-11</option>
-                        <option value="gpt-5.2-chat-latest">gpt-5.2-chat-latest</option>
-                        <option value="gpt-5.2-pro">gpt-5.2-pro</option>
-                        <option value="gpt-5.2-pro-2025-12-11">gpt-5.2-pro-2025-12-11</option>
-                        <option value="gpt-5.2-medium">gpt-5.2-medium</option>
-                        <option value="gpt-5.2-high">gpt-5.2-high</option>
-                        <option value="deepseek-v3.2">deepseek-v3.2</option>
-                        <option value="deepseek-v3.2-thinking">deepseek-v3.2-thinking</option>
-                        <option value="gemini-3-pro-preview">gemini-3-pro-preview</option>
-                        <option value="gemini-3-pro-preview-low">gemini-3-pro-preview-low</option>
-                        <option value="gemini-3-pro-preview-search">gemini-3-pro-preview-search</option>
-                        <option value="gemini-3-pro-preview-thinking">gemini-3-pro-preview-thinking</option>
-                        <option value="gemini-3-pro-preview-thinking-*">gemini-3-pro-preview-thinking-*</option>
-                    </select>
-                    <span id="token-estimate" class="text-xs text-gray-400 ml-2 whitespace-nowrap"></span>
-                </div>
-                <!-- 输入区域 -->
-                <div class="input-area p-3 flex items-end gap-2 w-full shadow-lg">
-                    <textarea id="user-input" rows="1" placeholder="给 AI 发送消息...   支持粘贴图片(Ctrl+V) | 上传Office/图片/文本"
-                        class="bg-transparent flex-grow resize-none overflow-y-hidden focus:outline-none py-1 px-2 text-sm md:text-base"
-                        oninput="autoResize(this)"></textarea>
-                    <button id="attach-btn" onclick="triggerFileInput()" title="添加文件"
-                        class="p-2 rounded-xl transition-colors flex-shrink-0">
-                        <i data-lucide="paperclip" class="w-5 h-5"></i>
-                    </button>
-                    <input type="file" id="hidden-file-input"
-                        accept="image/*,.txt,.md,.json,.csv,.py,.js,.html,.css,.xml,.yaml,.yml,.log,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
-                        multiple hidden onchange="handleFileSelect(event)">
-                    <button id="send-btn" onclick="sendMessage()"
-                        class="bg-white text-black p-2 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 flex-shrink-0">
-                        <i data-lucide="arrow-up" class="w-5 h-5"></i>
-                    </button>
-                    <button id="stop-btn" onclick="stopGeneration()"
-                        class="bg-white text-black p-2 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 hidden flex-shrink-0">
-                        <i data-lucide="square" class="w-5 h-5"></i>
-                    </button>
-                </div>
-            </div>
-        </footer>
-    </main>
+    </footer>
+</main>
 
-    <!-- 设置弹窗 -->
-    <div id="settings-modal" class="fixed inset-0 z-[100] items-center justify-center p-4">
-        <div class="bg-[#2f2f2f] w-full max-w-md rounded-xl shadow-2xl overflow-hidden text-white">
-            <div class="p-6 border-b border-gray-700 flex justify-between items-center">
-                <h2 class="text-xl font-semibold">偏好设置</h2>
-                <button onclick="toggleSettings()" class="text-gray-400 hover:text-white"><i
-                        data-lucide="x"></i></button>
+<div id="settings-modal" class="fixed inset-0 z-[100] items-center justify-center p-4">
+    <div class="bg-[#2f2f2f] w-full max-w-md rounded-xl shadow-2xl overflow-hidden text-white">
+        <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+            <h2 class="text-xl font-semibold">偏好设置</h2>
+            <button onclick="toggleSettings()" class="text-gray-400 hover:text-white"><i data-lucide="x"></i></button>
+        </div>
+        <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+            <h2 class="text-lg font-semibold text-gray-200">AI对话</h2>
+            <div>
+                <label class="block text-sm font-medium mb-2 text-gray-300">全局提示词 (System Prompt)</label>
+                <textarea id="sys-prompt"
+                    class="w-full bg-[#171717] border border-gray-700 rounded-xl p-3 text-sm outline-none focus:border-emerald-500 transition-colors"
+                    rows="4"></textarea>
             </div>
-            <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-                <h2 class="text-lg font-semibold text-gray-200">AI对话</h2>
-                <div>
-                    <label class="block text-sm font-medium mb-2 text-gray-300">全局提示词 (System Prompt)</label>
-                    <textarea id="sys-prompt"
-                        class="w-full bg-[#171717] border border-gray-700 rounded-xl p-3 text-sm outline-none focus:border-emerald-500 transition-colors"
-                        rows="4"></textarea>
+            <div>
+                <label class="block text-sm font-medium mb-3 text-gray-300">回复随机性 (Temperature)</label>
+                <div class="flex gap-2">
+                    <button class="temp-btn rounded-xl" data-temp="0.2" onclick="setTemp(0.2, this)">严谨</button>
+                    <button class="temp-btn rounded-xl" data-temp="0.7" onclick="setTemp(0.7, this)">均衡</button>
+                    <button class="temp-btn rounded-xl" data-temp="1.2" onclick="setTemp(1.2, this)">创意性</button>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium mb-3 text-gray-300">回复随机性 (Temperature)</label>
-                    <div class="flex gap-2">
-                        <button class="temp-btn rounded-xl" data-temp="0.2" onclick="setTemp(0.2, this)">严谨</button>
-                        <button class="temp-btn rounded-xl" data-temp="0.7" onclick="setTemp(0.7, this)">均衡</button>
-                        <button class="temp-btn rounded-xl" data-temp="1.2" onclick="setTemp(1.2, this)">创意性</button>
+            </div>
+            <h2 class="text-lg font-semibold text-gray-200">UI自定义</h2>
+            <div>
+                <label class="block text-sm font-medium mb-3 text-gray-300">视觉主题</label>
+                <div class="flex gap-2">
+                    <button class="theme-btn rounded-xl" data-theme="light" onclick="setTheme('light')">浅色</button>
+                    <button class="theme-btn rounded-xl" data-theme="dark" onclick="setTheme('dark')">深色</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-3 text-gray-300">字体大小</label>
+                <div class="flex gap-2">
+                    <button class="font-btn rounded-xl" data-size="small" onclick="setFontSize('small', this)">小</button>
+                    <button class="font-btn rounded-xl" data-size="medium" onclick="setFontSize('medium', this)">中</button>
+                    <button class="font-btn rounded-xl" data-size="large" onclick="setFontSize('large', this)">大</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-3 text-gray-300">代码大小 (Canvas)</label>
+                <div class="flex gap-2">
+                    <button class="code-size-btn rounded-xl" data-size="small" onclick="setCanvasFontSize('small', this)">小</button>
+                    <button class="code-size-btn rounded-xl" data-size="medium" onclick="setCanvasFontSize('medium', this)">中</button>
+                    <button class="code-size-btn rounded-xl" data-size="large" onclick="setCanvasFontSize('large', this)">大</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-3 text-gray-300">背景图片</label>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="flex flex-col items-center gap-2">
+                        <img id="bg-thumb-1" src="1.JPG" alt="1"
+                            class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
+                            onclick="setBackgroundImage(1, this)">
+                        <span class="text-xs text-gray-400 text-center">1</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2">
+                        <img id="bg-thumb-2" src="2.JPG" alt="2"
+                            class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
+                            onclick="setBackgroundImage(2, this)">
+                        <span class="text-xs text-gray-400 text-center">2</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2">
+                        <img id="bg-thumb-3" src="3.JPG" alt="3"
+                            class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
+                            onclick="setBackgroundImage(3, this)">
+                        <span class="text-xs text-gray-400 text-center">3</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2">
+                        <img id="bg-thumb-4" src="4.JPG" alt="4"
+                            class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
+                            onclick="setBackgroundImage(4, this)">
+                        <span class="text-xs text-gray-400 text-center">4</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2">
+                        <img id="bg-thumb-5" src="5.JPG" alt="5"
+                            class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
+                            onclick="setBackgroundImage(5, this)">
+                        <span class="text-xs text-gray-400 text-center">5</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2">
+                        <img id="bg-thumb-6" src="6.JPG" alt="6"
+                            class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
+                            onclick="setBackgroundImage(6, this)">
+                        <span class="text-xs text-gray-400 text-center">6</span>
                     </div>
                 </div>
-                <h2 class="text-lg font-semibold text-gray-200">UI自定义</h2>
-                <div>
-                    <label class="block text-sm font-medium mb-3 text-gray-300">视觉主题</label>
-                    <div class="flex gap-2">
-                        <button class="theme-btn rounded-xl" data-theme="light" onclick="setTheme('light')">浅色</button>
-                        <button class="theme-btn rounded-xl" data-theme="dark" onclick="setTheme('dark')">深色</button>
+            </div>
+            <div class="border-t border-gray-700 pt-4">
+                <h2 class="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                    <i data-lucide="key" class="w-4 h-4"></i>API 配置
+                </h2>
+                <p class="text-xs text-gray-400 mb-3">填入你的 Key 即可生效，在此处修改并保存，会持久存储。</p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-300">API Key</label>
+                        <input type="password" id="api-key-input"
+                            class="w-full bg-[#171717] border border-gray-700 rounded-xl p-3 text-sm outline-none focus:border-emerald-500 transition-colors"
+                            placeholder="sk-...">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-300">Base URL</label>
+                        <input type="text" id="base-url-input"
+                            class="w-full bg-[#171717] border border-gray-700 rounded-xl p-3 text-sm outline-none focus:border-emerald-500 transition-colors"
+                            placeholder="https://api.vveai.com/v1">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-300">最大 Token 限制 <span
+                                class="text-gray-500">(0=不限制)</span></label>
+                        <input type="number" id="max-tokens-input" min="0" step="1000" value="0"
+                            class="w-full bg-[#171717] border border-gray-700 rounded-xl p-3 text-sm outline-none focus:border-emerald-500 transition-colors"
+                            placeholder="0">
                     </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium mb-3 text-gray-300">字体大小</label>
-                    <div class="flex gap-2">
-                        <button class="font-btn rounded-xl" data-size="small"
-                        onclick="setFontSize('small', this)">小</button>
-                        <button class="font-btn rounded-xl" data-size="medium"
-                            onclick="setFontSize('medium', this)">中</button>
-                        <button class="font-btn rounded-xl" data-size="large"
-                            onclick="setFontSize('large', this)">大</button>
-                    </div>
+            </div>
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-700">
+                <button onclick="toggleSettings()" class="px-4 py-2 hover:bg-gray-800 rounded-xl text-sm">取消</button>
+                <button onclick="saveSettings()"
+                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors text-sm font-medium">保存设置</button>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2 text-gray-300 flex items-center gap-2">
+                    <i data-lucide="brain" class="w-4 h-4"></i>云端记忆
+                </label>
+                <div id="memory-list-container" class="memory-list space-y-2">
+                    <div class="text-gray-400 text-xs italic p-2">加载记忆中...</div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium mb-3 text-gray-300">背景图片</label>
-                    <div class="grid grid-cols-3 gap-3">
-                        <div class="flex flex-col items-center gap-2">
-                            <img id="bg-thumb-1" src="1.JPG" alt="1"
-                                class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
-                                onclick="setBackgroundImage(1, this)">
-                            <span class="text-xs text-gray-400 text-center">1</span>
-                        </div>
-                        <div class="flex flex-col items-center gap-2">
-                            <img id="bg-thumb-2" src="2.JPG" alt="2"
-                                class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
-                                onclick="setBackgroundImage(2, this)">
-                            <span class="text-xs text-gray-400 text-center">2</span>
-                        </div>
-                        <div class="flex flex-col items-center gap-2">
-                            <img id="bg-thumb-3" src="3.JPG" alt="3"
-                                class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
-                                onclick="setBackgroundImage(3, this)">
-                            <span class="text-xs text-gray-400 text-center">3</span>
-                        </div>
-                        <div class="flex flex-col items-center gap-2">
-                            <img id="bg-thumb-4" src="4.JPG" alt="4"
-                                class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
-                                onclick="setBackgroundImage(4, this)">
-                            <span class="text-xs text-gray-400 text-center">4</span>
-                        </div>
-                        <div class="flex flex-col items-center gap-2">
-                            <img id="bg-thumb-5" src="5.JPG" alt="5"
-                                class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
-                                onclick="setBackgroundImage(5, this)">
-                            <span class="text-xs text-gray-400 text-center">5</span>
-                        </div>
-                        <div class="flex flex-col items-center gap-2">
-                            <img id="bg-thumb-6" src="6.JPG" alt="6"
-                                class="w-20 h-20 object-cover object-center rounded-xl cursor-pointer border-2 border-gray-600 hover:border-emerald-500 transition-colors"
-                                onclick="setBackgroundImage(6, this)">
-                            <span class="text-xs text-gray-400 text-center">6</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="border-t border-gray-700 pt-4">
-                    <h2 class="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
-                        <i data-lucide="key" class="w-4 h-4"></i>API 配置
-                    </h2>
-                    <p class="text-xs text-gray-400 mb-3">填入你的 Key 即可生效，在此处修改并保存，会持久存储。</p>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-sm font-medium mb-2 text-gray-300">API Key</label>
-                            <input type="password" id="api-key-input"
-                                class="w-full bg-[#171717] border border-gray-700 rounded-xl p-3 text-sm outline-none focus:border-emerald-500 transition-colors"
-                                placeholder="sk-...">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-2 text-gray-300">Base URL</label>
-                            <input type="text" id="base-url-input"
-                                class="w-full bg-[#171717] border border-gray-700 rounded-xl p-3 text-sm outline-none focus:border-emerald-500 transition-colors"
-                                placeholder="https://api.vveai.com/v1">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-2 text-gray-300">最大 Token 限制 <span class="text-gray-500">(0=不限制)</span></label>
-                            <input type="number" id="max-tokens-input" min="0" step="1000" value="0"
-                                class="w-full bg-[#171717] border border-gray-700 rounded-xl p-3 text-sm outline-none focus:border-emerald-500 transition-colors"
-                                placeholder="0">
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-end gap-3 pt-4 border-t border-gray-700">
-                    <button onclick="toggleSettings()"
-                        class="px-4 py-2 hover:bg-gray-800 rounded-xl text-sm">取消</button>
-                    <button onclick="saveSettings()"
-                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors text-sm font-medium">保存设置</button>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-2 text-gray-300 flex items-center gap-2">
-                        <i data-lucide="brain" class="w-4 h-4"></i>云端记忆
-                    </label>
-                    <div id="memory-list-container" class="memory-list space-y-2">
-                        <div class="text-gray-400 text-xs italic p-2">加载记忆中...</div>
-                    </div>
-                    <p class="text-[11px] text-gray-500 mt-2">记忆由管理员在云端维护，每次对话AI都会参考这些信息。</p>
-                </div>
-                <div class="border-t border-gray-700 pt-4">
-                    <label class="block text-sm font-medium mb-3 text-gray-300 flex items-center gap-2">
-                        <i data-lucide="info" class="w-4 h-4"></i>关于信息
-                    </label>
-                    <div class="text-xs text-gray-400 space-y-3">
-                        <p class="leading-relaxed">
-                            <strong class="text-gray-300">AI Chat UI Demo</strong><br>
-                            一个轻量级云端的智能对话应用，支持多种AI模型，具备持久化存储和多模态能力，致力于提供流畅的AI交互体验。
-                        </p>
-                        <p class="leading-relaxed">
-                            <strong class="text-gray-300">开发者</strong><br>
-                            <span id="app-author">JHCWColin/abpdf</span>
-                        </p>
-                        <p class="leading-relaxed">
-                            <strong class="text-gray-300">版本</strong><br>
-                            <span id="app-version">V1.32 (build20260523)</span>
-                        </p>
-                        <div class="bg-[#1a1a1a] rounded-xl p-3 border border-gray-700 license-box">
-                            <p class="font-mono text-[10px] text-gray-500 mb-2">MIT License</p>
-                            <p class="text-gray-500">本项目基于MIT开源协议发布，允许自由使用、修改和分发。详见 <a href="#"
-                                    class="text-emerald-400 hover:text-emerald-300">LICENSE</a> 文件。</p>
-                        </div>
+                <p class="text-[11px] text-gray-500 mt-2">记忆由管理员在云端维护，每次对话AI都会参考这些信息。</p>
+            </div>
+            <div class="border-t border-gray-700 pt-4">
+                <label class="block text-sm font-medium mb-3 text-gray-300 flex items-center gap-2">
+                    <i data-lucide="info" class="w-4 h-4"></i>关于信息
+                </label>
+                <div class="text-xs text-gray-400 space-y-3">
+                    <p class="leading-relaxed">
+                        <strong class="text-gray-300">AI Chat UI Demo</strong><br>
+                        一个轻量级云端的智能对话应用，支持多种AI模型，具备持久化存储和多模态能力，致力于提供流畅的AI交互体验。
+                        <br>Your Next Gen Vibe Coding Toolkit.
+                    </p>
+                    <p class="leading-relaxed">
+                        <strong class="text-gray-300">开发者</strong><br>
+                        <span id="app-author">JHCWColin/abpdf</span>
+                    </p>
+                    <p class="leading-relaxed">
+                        <strong class="text-gray-300">版本</strong><br>
+                        <span id="app-version">V2.0 (build20260524)</span>
+                    </p>
+                    <div class="bg-[#1a1a1a] rounded-xl p-3 border border-gray-700 license-box">
+                        <p class="font-mono text-[10px] text-gray-500 mb-2">MIT License</p>
+                        <p class="text-gray-500">本项目基于MIT开源协议发布，允许自由使用、修改和分发。详见 <a href="#"
+                                class="text-emerald-400 hover:text-emerald-300">LICENSE</a> 文件。</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        // ==================== 配置 (默认值) ====================
-        const DEFAULT_API_KEY = '';
-        const DEFAULT_BASE_URL = 'https://api.vveai.com/v1';
+<script>
+    const DEFAULT_API_KEY = 'sk-2LXzp4RQCOAywuqu63EfE5D0480e46Bc9cEa8d1a5a38D117';
+    const DEFAULT_BASE_URL = 'https://api.vveai.com/v1';
 
-        function getAPIKey() {
-            return localStorage.getItem('api_key') || DEFAULT_API_KEY;
+    function getAPIKey() { return localStorage.getItem('api_key') || DEFAULT_API_KEY; }
+    function getBaseURL() { return localStorage.getItem('base_url') || DEFAULT_BASE_URL; }
+
+    const LC_CONFIG = {
+        id: 'G2jNexXDgQoJkiR5bf7aGqZj-gzGzoHsz',
+        key: 'tO6fRxnoCUEAJ3HyHbzmlG9R',
+        masterKey: 'tO6fRxnoCUEAJ3HyHbzmlG9R',
+        base: 'https://g2jnexxd.lc-cn-n1-shared.com/1.1/classes/AIChats'
+    };
+
+    let chats = JSON.parse(localStorage.getItem('ai_chats') || '[]');
+    let activeChatId = null;
+    let systemPrompt = localStorage.getItem('sys_prompt') || "";
+    let currentTemp = parseFloat(localStorage.getItem('chat_temp')) || 0.7;
+    let currentFontSize = localStorage.getItem('font_size') || 'medium';
+    let currentCanvasFontSize = localStorage.getItem('canvas_font_size') || 'medium';
+    let selectedBackgroundImage = parseInt(localStorage.getItem('bg_image')) || 1;
+    let abortController = null;
+    let isGenerating = false;
+    let filteredChats = [];
+    let cachedMemories = [];
+    let currentAttachments = [];
+    let maxTokensLimit = parseInt(localStorage.getItem('max_tokens_limit') || '0') || 0;
+    let canvasPanelVisible = false;
+    let processedReplaceCount = 0;
+    let sessionReplaceBlocks = [];
+    let cmEditor = null;
+
+    function getImageDetailConfig() {
+        const level = localStorage.getItem('image_detail_level') || 'medium';
+        switch (level) {
+            case 'low': return { maxWidth: 400, quality: 0.4 };
+            case 'medium': return { maxWidth: 800, quality: 0.7 };
+            case 'high': return { maxWidth: 1600, quality: 0.9 };
+            case 'original': return { maxWidth: Infinity, quality: 1.0 };
+            default: return { maxWidth: 800, quality: 0.7 };
         }
+    }
 
-        function getBaseURL() {
-            return localStorage.getItem('base_url') || DEFAULT_BASE_URL;
-        }
+    function onImageDetailChange() {
+        const select = document.getElementById('image-detail-select');
+        const value = select ? select.value : 'medium';
+        localStorage.setItem('image_detail_level', value);
+        updateTokenEstimate();
+    }
 
-        const LC_CONFIG = {
-            id: '',
-            key: '',
-            masterKey: '',
-            base: 'https://g2jnexxd.lc-cn-n1-shared.com/1.1/classes/AIChats'
-        };
+    function updateImageDetailVisibility() {
+        const container = document.getElementById('image-detail-container');
+        if (!container) return;
+        const hasImage = currentAttachments.some(att => att.isImage);
+        container.style.display = hasImage ? 'flex' : 'none';
+    }
 
-        let chats = JSON.parse(localStorage.getItem('ai_chats') || '[]');
-        let activeChatId = null;
-        let systemPrompt = localStorage.getItem('sys_prompt') || "";
-        let currentTemp = parseFloat(localStorage.getItem('chat_temp')) || 0.7;
-        let currentFontSize = localStorage.getItem('font_size') || 'medium';
-        let selectedBackgroundImage = parseInt(localStorage.getItem('bg_image')) || 1;
-        let abortController = null;
-        let isGenerating = false;
-        let filteredChats = [];
-        let cachedMemories = [];
-        let currentAttachments = [];
-        let maxTokensLimit = parseInt(localStorage.getItem('max_tokens_limit') || '0') || 0;
+    function getGreetingByTime() {
+        const hour = new Date().getHours();
+        if (hour >= 23 || hour < 6) return "夜深了，注意休息，不要太拼哦。<br>深夜思考也别有一番滋味。";
+        if (hour >= 6 && hour < 12) return "早上好，新的一天，愿光芒洒满你的道路。<br>有什么我可以帮你的吗？";
+        if (hour >= 12 && hour < 18) return "午后时光，思维正活跃。<br>我随时准备好回应你。";
+        return "晚上好，忙碌一天辛苦了。<br>一起来整理下思绪吧。";
+    }
 
-        // ==================== 图片精细度配置 ====================
-        function getImageDetailConfig() {
-            const level = localStorage.getItem('image_detail_level') || 'medium';
-            switch (level) {
-                case 'low':
-                    return { maxWidth: 400, quality: 0.4 };
-                case 'medium':
-                    return { maxWidth: 800, quality: 0.7 };
-                case 'high':
-                    return { maxWidth: 1600, quality: 0.9 };
-                case 'original':
-                    return { maxWidth: Infinity, quality: 1.0 };
-                default:
-                    return { maxWidth: 800, quality: 0.7 };
-            }
-        }
-
-        function onImageDetailChange() {
-            const select = document.getElementById('image-detail-select');
-            const value = select ? select.value : 'medium';
-            localStorage.setItem('image_detail_level', value);
-            updateTokenEstimate();
-        }
-
-        // 根据当前附件列表显示/隐藏图片精细度选择器
-        function updateImageDetailVisibility() {
-            const container = document.getElementById('image-detail-container');
-            if (!container) return;
-            const hasImage = currentAttachments.some(att => att.isImage);
-            container.style.display = hasImage ? 'flex' : 'none';
-        }
-
-        function getGreetingByTime() {
-            const hour = new Date().getHours();
-            if (hour >= 23 || hour < 6) return "夜深了，注意休息，不要太拼哦。<br>深夜思考也别有一番滋味。";
-            if (hour >= 6 && hour < 12) return "早上好，新的一天，愿光芒洒满你的道路。<br>有什么我可以帮你的吗？";
-            if (hour >= 12 && hour < 18) return "午后时光，思维正活跃。<br>我随时准备好回应你。";
-            return "晚上好，忙碌一天辛苦了。<br>一起来整理下思绪吧。";
-        }
-
-        function renderMathFormulas(element) {
-            if (!window.katex) return;
-            const blockRegex = /\$\$([\s\S]*?)\$\$/g;
-            let blockHtml = element.innerHTML;
-            blockHtml = blockHtml.replace(blockRegex, (match, math) => {
-                try {
-                    const rendered = window.katex.renderToString(math.trim(), {
-                        displayMode: true,
-                        throwOnError: false
-                    });
-                    return `<div class="katex-display">${rendered}</div>`;
-                } catch (e) { return match; }
-            });
-            const inlineRegex = /\$([^\$\n]+?)\$/g;
-            blockHtml = blockHtml.replace(inlineRegex, (match, math) => {
-                try {
-                    const rendered = window.katex.renderToString(math.trim(), {
-                        displayMode: false,
-                        throwOnError: false
-                    });
-                    return `<span class="katex-inline">${rendered}</span>`;
-                } catch (e) { return match; }
-            });
-            element.innerHTML = blockHtml;
-        }
-
-        async function fetchMemoriesFromCloud() {
+    function renderMathFormulas(element) {
+        if (!window.katex) return;
+        const blockRegex = /\$\$([\s\S]*?)\$\$/g;
+        let blockHtml = element.innerHTML;
+        blockHtml = blockHtml.replace(blockRegex, (match, math) => {
             try {
-                const url = `${LC_CONFIG.base.replace('AIChats', 'Memory')}`;
-                const headers = {
-                    'X-LC-Id': LC_CONFIG.id,
-                    'X-LC-Key': `${LC_CONFIG.masterKey},master`,
-                    'Content-Type': 'application/json'
-                };
-                const res = await fetch(url, { method: 'GET', headers });
-                if (!res.ok) throw new Error(`记忆获取失败: ${res.status}`);
-                const data = await res.json();
-                const results = data.results || [];
-                const memories = results.map(item => item.Memory).filter(m => m && typeof m === 'string' && m.trim()
-                    .length > 0);
-                cachedMemories = memories;
-                return memories;
-            } catch (err) {
-                console.warn("获取记忆异常:", err);
-                cachedMemories = [];
-                return [];
-            }
-        }
-
-        async function renderMemoriesToSettings() {
-            const container = document.getElementById('memory-list-container');
-            if (!container) return;
+                const rendered = window.katex.renderToString(math.trim(), { displayMode: true, throwOnError: false });
+                return `<div class="katex-display">${rendered}</div>`;
+            } catch (e) { return match; }
+        });
+        const inlineRegex = /\$([^\$\n]+?)\$/g;
+        blockHtml = blockHtml.replace(inlineRegex, (match, math) => {
             try {
-                const memories = await fetchMemoriesFromCloud();
-                if (!memories.length) {
-                    container.innerHTML = `<div class="text-gray-400 text-xs italic p-2">暂无云端记忆</div>`;
-                } else {
-                    container.innerHTML = memories.map((mem, idx) => `
-                        <div class="memory-card">
-                            <div class="flex gap-2 items-start">
-                                <span class="text-emerald-400 text-xs font-bold">#${idx + 1}</span>
-                                <span class="text-sm leading-relaxed break-words">${escapeHtml(mem)}</span>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-                lucide.createIcons();
-            } catch (err) {
-                container.innerHTML = `<div class="text-red-400 text-xs p-2">无法加载记忆: ${err.message}</div>`;
-            }
+                const rendered = window.katex.renderToString(math.trim(), { displayMode: false, throwOnError: false });
+                return `<span class="katex-inline">${rendered}</span>`;
+            } catch (e) { return match; }
+        });
+        element.innerHTML = blockHtml;
+    }
+
+    async function fetchMemoriesFromCloud() {
+        try {
+            const url = `${LC_CONFIG.base.replace('AIChats', 'Memory')}`;
+            const headers = {
+                'X-LC-Id': LC_CONFIG.id,
+                'X-LC-Key': `${LC_CONFIG.masterKey},master`,
+                'Content-Type': 'application/json'
+            };
+            const res = await fetch(url, { method: 'GET', headers });
+            if (!res.ok) throw new Error(`记忆获取失败: ${res.status}`);
+            const data = await res.json();
+            const results = data.results || [];
+            const memories = results.map(item => item.Memory).filter(m => m && typeof m === 'string' && m.trim().length > 0);
+            cachedMemories = memories;
+            return memories;
+        } catch (err) {
+            console.warn("获取记忆异常:", err);
+            cachedMemories = [];
+            return [];
         }
+    }
 
-        function escapeHtml(str) {
-            return str.replace(/[&<>]/g, function (m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function (c) { return c; });
-        }
-
-        async function buildSystemMessageWithMemories() {
-            let baseSys = systemPrompt || "";
-            try {
-                const memories = await fetchMemoriesFromCloud();
-                if (memories && memories.length > 0) {
-                    const memorySection = "\n\n#关于对话者的常用记忆\n" + memories.map((m, idx) => `${idx + 1}. ${m}`).join(
-                        "\n") +
-                        "\n\n请参考以上信息，并结合对话者的背景进行回复。";
-                    return baseSys + memorySection;
-                }
-            } catch (e) { console.warn("记忆合并失败", e); }
-            return baseSys;
-        }
-
-        function compressImage(base64Data, maxWidth = 800, quality = 0.7) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => {
-                    let width = img.width;
-                    let height = img.height;
-                    if (width <= maxWidth) { resolve(base64Data); return; }
-                    const canvas = document.createElement('canvas');
-                    height = Math.round((maxWidth / width) * height);
-                    width = maxWidth;
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    const compressed = canvas.toDataURL('image/jpeg', quality);
-                    resolve(compressed);
-                };
-                img.onerror = () => reject(new Error('图片加载失败'));
-                img.src = base64Data;
-            });
-        }
-
-        // ========== 前端 Token 预估 ==========
-        function estimateTotalTokens() {
-            const chat = activeChatId ? chats.find(c => c.id === activeChatId) : null;
-            const messages = chat ? chat.messages.slice() : [];
-
-            const memText = (cachedMemories && cachedMemories.length > 0) ?
-                "\n\n#关于对话者的常用记忆\n" + cachedMemories.map((m, idx) => `${idx + 1}. ${m}`).join("\n") +
-                "\n\n请参考以上信息，并结合对话者的背景进行回复。" : "";
-            const systemContent = (systemPrompt || "") + memText;
-
-            const inputText = document.getElementById('user-input')?.value || '';
-            let currentAttachmentText = '';
-            for (const att of currentAttachments) {
-                if (att.isText && att.data) {
-                    currentAttachmentText += `\n\n[文件: ${att.name}]\n${att.data}\n[/文件: ${att.name}]`;
-                }
-            }
-            const currentFullInput = inputText + currentAttachmentText;
-
-            let allText = systemContent;
-            for (const msg of messages) {
-                allText += '\n' + (msg.content || '');
-                if (msg.attachments && Array.isArray(msg.attachments)) {
-                    for (const att of msg.attachments) {
-                        if (att.isText && att.data) {
-                            allText += '\n' + att.data;
-                        }
-                    }
-                }
-            }
-            if (currentFullInput.trim()) {
-                allText += '\n' + currentFullInput;
-            }
-
-            if (!allText.trim()) return 0;
-
-            try {
-                if (typeof encode !== 'undefined') {
-                    return encode(allText).length;
-                }
-            } catch (e) {
-                // 降级估算
-            }
-            const chineseChars = (allText.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
-            const nonChinese = allText.replace(/[\u4e00-\u9fff\u3400-\u4dbf]/g, '');
-            const words = nonChinese.match(/\b\w+\b/g) || [];
-            const remaining = nonChinese.length - words.join('').length;
-            return Math.round(chineseChars * 2 + words.length * 1.3 + remaining * 0.2);
-        }
-
-        function updateTokenEstimate() {
-            const span = document.getElementById('token-estimate');
-            if (!span) return;
-            const tokenCount = estimateTotalTokens();
-            const max = maxTokensLimit || 0;
-            if (tokenCount > 0) {
-                if (max > 0 && tokenCount >= max) {
-                    span.textContent = `预估tokens: ${tokenCount} 已达到最大token限制`;
-                    span.style.color = 'red';
-                } else {
-                    span.textContent = `预估tokens: ${tokenCount}`;
-                    span.style.color = '';
-                }
-                span.style.display = 'inline';
+    async function renderMemoriesToSettings() {
+        const container = document.getElementById('memory-list-container');
+        if (!container) return;
+        try {
+            const memories = await fetchMemoriesFromCloud();
+            if (!memories.length) {
+                container.innerHTML = `<div class="text-gray-400 text-xs italic p-2">暂无云端记忆</div>`;
             } else {
-                span.textContent = '';
-                span.style.display = 'none';
+                container.innerHTML = memories.map((mem, idx) => `
+                    <div class="memory-card">
+                        <div class="flex gap-2 items-start">
+                            <span class="text-emerald-400 text-xs font-bold">#${idx + 1}</span>
+                            <span class="text-sm leading-relaxed break-words">${escapeHtml(mem)}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            lucide.createIcons();
+        } catch (err) {
+            container.innerHTML = `<div class="text-red-400 text-xs p-2">无法加载记忆: ${err.message}</div>`;
+        }
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) { return c; });
+    }
+
+    async function buildSystemMessageWithMemories() {
+        let baseSys = systemPrompt || "";
+        try {
+            const memories = await fetchMemoriesFromCloud();
+            if (memories && memories.length > 0) {
+                const memorySection = "\n\n#关于对话者的常用记忆\n" + memories.map((m, idx) => `${idx + 1}. ${m}`).join("\n") +
+                    "\n\n请参考以上信息，并结合对话者的背景进行回复。";
+                return baseSys + memorySection;
+            }
+        } catch (e) { console.warn("记忆合并失败", e); }
+        return baseSys;
+    }
+
+    function compressImage(base64Data, maxWidth = 800, quality = 0.7) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+                if (width <= maxWidth) { resolve(base64Data); return; }
+                const canvas = document.createElement('canvas');
+                height = Math.round((maxWidth / width) * height);
+                width = maxWidth;
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressed = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressed);
+            };
+            img.onerror = () => reject(new Error('图片加载失败'));
+            img.src = base64Data;
+        });
+    }
+
+    function estimateTotalTokens() {
+        const chat = activeChatId ? chats.find(c => c.id === activeChatId) : null;
+        const messages = chat ? chat.messages.slice() : [];
+        const memText = (cachedMemories && cachedMemories.length > 0) ?
+            "\n\n#关于对话者的常用记忆\n" + cachedMemories.map((m, idx) => `${idx + 1}. ${m}`).join("\n") +
+            "\n\n请参考以上信息，并结合对话者的背景进行回复。" : "";
+        const systemContent = (systemPrompt || "") + memText;
+        const inputText = document.getElementById('user-input')?.value || '';
+        let currentAttachmentText = '';
+        for (const att of currentAttachments) {
+            if (att.isText && att.data) {
+                currentAttachmentText += `\n\n[文件: ${att.name}]\n${att.data}\n[/文件: ${att.name}]`;
             }
         }
-
-        // ========== 文件上传处理 ==========
-        function triggerFileInput() {
-            document.getElementById('hidden-file-input').click();
+        const currentFullInput = inputText + currentAttachmentText;
+        let allText = systemContent;
+        for (const msg of messages) {
+            allText += '\n' + (msg.content || '');
+            if (msg.attachments && Array.isArray(msg.attachments)) {
+                for (const att of msg.attachments) {
+                    if (att.isText && att.data) allText += '\n' + att.data;
+                }
+            }
         }
+        if (currentFullInput.trim()) allText += '\n' + currentFullInput;
+        if (!allText.trim()) return 0;
+        try { if (typeof encode !== 'undefined') return encode(allText).length; } catch (e) {}
+        const chineseChars = (allText.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
+        const nonChinese = allText.replace(/[\u4e00-\u9fff\u3400-\u4dbf]/g, '');
+        const words = nonChinese.match(/\b\w+\b/g) || [];
+        const remaining = nonChinese.length - words.join('').length;
+        return Math.round(chineseChars * 2 + words.length * 1.3 + remaining * 0.2);
+    }
 
-        async function handleFileSelect(event) {
-            const files = Array.from(event.target.files);
-            if (files.length === 0) return;
-            event.target.value = '';
+    function updateTokenEstimate() {
+        const span = document.getElementById('token-estimate');
+        if (!span) return;
+        const tokenCount = estimateTotalTokens();
+        const max = maxTokensLimit || 0;
+        if (tokenCount > 0) {
+            if (max > 0 && tokenCount >= max) {
+                span.textContent = `预估tokens: ${tokenCount} 已达到最大token限制`;
+                span.style.color = 'red';
+            } else {
+                span.textContent = `预估tokens: ${tokenCount}`;
+                span.style.color = '';
+            }
+            span.style.display = 'inline';
+        } else {
+            span.textContent = '';
+            span.style.display = 'none';
+        }
+    }
 
-            const MAX_TOTAL_ATTACHMENTS = 8;
-            if (currentAttachments.length + files.length > MAX_TOTAL_ATTACHMENTS) {
-                alert(`最多只能附加 ${MAX_TOTAL_ATTACHMENTS} 个文件，当前已有 ${currentAttachments.length} 个`);
+    function triggerFileInput() { document.getElementById('hidden-file-input').click(); }
+
+    async function handleFileSelect(event) {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+        event.target.value = '';
+        const MAX_TOTAL_ATTACHMENTS = 8;
+        if (currentAttachments.length + files.length > MAX_TOTAL_ATTACHMENTS) {
+            alert(`最多只能附加 ${MAX_TOTAL_ATTACHMENTS} 个文件，当前已有 ${currentAttachments.length} 个`);
+            return;
+        }
+        for (const file of files) {
+            if (currentAttachments.length >= MAX_TOTAL_ATTACHMENTS) break;
+            if (file.size > 50 * 1024 * 1024) { alert(`文件 "${file.name}" 超过50MB，无法添加`); continue; }
+            try {
+                const attachment = await readFileAsAttachment(file);
+                currentAttachments.push(attachment);
+            } catch (err) {
+                console.error('读取文件失败:', file.name, err);
+                alert(`读取文件 "${file.name}" 失败: ${err.message}`);
+            }
+        }
+        renderAttachmentPreviews();
+        updateAttachButtonState();
+        updateImageDetailVisibility();
+        updateTokenEstimate();
+    }
+
+    async function extractTextFromDocx(file) {
+        if (typeof mammoth === 'undefined') throw new Error('Mammoth.js 库未加载，无法解析docx');
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        const text = result.value;
+        if (!text || !text.trim()) throw new Error('未能从DOCX中提取到文本内容');
+        return text.trim();
+    }
+
+    async function extractTextFromPptx(file) {
+        if (typeof pptxtojson === 'undefined') throw new Error('pptxtojson 库未加载，无法解析pptx');
+        const arrayBuffer = await file.arrayBuffer();
+        const jsonData = await pptxtojson.parse(arrayBuffer, { imageMode: 'none' });
+        const slides = jsonData.slides || [];
+        let fullText = '';
+        slides.forEach((slide, idx) => {
+            const slideTexts = [];
+            if (slide.note) slideTexts.push(`[备注]: ${slide.note}`);
+            if (slide.elements && Array.isArray(slide.elements)) {
+                slide.elements.forEach(el => {
+                    if (el.content) {
+                        const plainText = el.content.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+                        if (plainText.trim()) slideTexts.push(plainText.trim());
+                    }
+                });
+            }
+            if (slideTexts.length > 0) {
+                if (fullText) fullText += '\n\n';
+                fullText += `--- 幻灯片 ${idx + 1} ---\n${slideTexts.join('\n')}`;
+            }
+        });
+        if (!fullText.trim()) throw new Error('未能从PPTX中提取到文本内容');
+        return fullText.trim();
+    }
+
+    async function extractTextFromXlsx(file) {
+        if (typeof XLSX === 'undefined') throw new Error('SheetJS 库未加载，无法解析xlsx');
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheetNames = workbook.SheetNames;
+        let allText = '';
+        for (const name of sheetNames) {
+            const sheet = workbook.Sheets[name];
+            const csv = XLSX.utils.sheet_to_csv(sheet, { strip: true });
+            if (csv.trim()) {
+                if (allText) allText += '\n\n';
+                allText += `=== 工作表: ${name} ===\n${csv}`;
+            }
+        }
+        if (!allText.trim()) throw new Error('未能从XLSX中提取到数据');
+        return allText.trim();
+    }
+
+    function readFileAsAttachment(file) {
+        return new Promise(async (resolve, reject) => {
+            const fileName = file.name || '';
+            const fileType = file.type || '';
+            const isOldPpt = fileName.endsWith('.ppt') && !fileName.endsWith('.pptx') || fileType === 'application/vnd.ms-powerpoint';
+            const isOldXls = fileName.endsWith('.xls') && !fileName.endsWith('.xlsx') || fileType === 'application/vnd.ms-excel';
+            const isOldDoc = fileName.endsWith('.doc') && !fileName.endsWith('.docx') || fileType === 'application/msword';
+            if (isOldPpt) { reject(new Error('暂不支持旧版.ppt格式，请转换为.pptx后上传')); return; }
+            if (isOldXls) { reject(new Error('暂不支持旧版.xls格式，请转换为.xlsx后上传')); return; }
+            if (isOldDoc) { reject(new Error('暂不支持旧版.doc格式，请转换为.docx后上传')); return; }
+            if (fileName.endsWith('.docx') || fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                try {
+                    const extractedText = await extractTextFromDocx(file);
+                    resolve({ name: file.name, type: 'text/plain', data: extractedText, fullDataUrl: null, size: extractedText.length, originalSize: file.size, isImage: false, isText: true, isDocx: true });
+                } catch (err) { reject(new Error(`解析docx失败: ${err.message}`)); }
                 return;
             }
+            if (fileName.endsWith('.pptx') || fileType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+                try {
+                    const extractedText = await extractTextFromPptx(file);
+                    resolve({ name: file.name, type: 'text/plain', data: extractedText, fullDataUrl: null, size: extractedText.length, originalSize: file.size, isImage: false, isText: true, isPptx: true });
+                } catch (err) { reject(new Error(`解析pptx失败: ${err.message}`)); }
+                return;
+            }
+            if (fileName.endsWith('.xlsx') || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+                try {
+                    const extractedText = await extractTextFromXlsx(file);
+                    resolve({ name: file.name, type: 'text/plain', data: extractedText, fullDataUrl: null, size: extractedText.length, originalSize: file.size, isImage: false, isText: true, isXlsx: true });
+                } catch (err) { reject(new Error(`解析xlsx失败: ${err.message}`)); }
+                return;
+            }
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        let base64Data = e.target.result;
+                        const detailConfig = getImageDetailConfig();
+                        if (detailConfig.maxWidth !== Infinity) base64Data = await compressImage(base64Data, detailConfig.maxWidth, detailConfig.quality);
+                        resolve({ name: file.name, type: file.type, data: base64Data.split(',')[1] || base64Data, fullDataUrl: base64Data, size: Math.round(base64Data.length * 0.75), originalSize: file.size, isImage: true });
+                    } catch (err) { reject(err); }
+                };
+                reader.onerror = () => reject(new Error('读取图片失败'));
+                reader.readAsDataURL(file);
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const textContent = e.target.result;
+                    resolve({ name: file.name, type: file.type || 'text/plain', data: textContent, fullDataUrl: null, size: textContent.length, originalSize: file.size, isImage: false, isText: true });
+                };
+                reader.onerror = () => reject(new Error('读取文件失败'));
+                reader.readAsText(file);
+            }
+        });
+    }
 
-            for (const file of files) {
-                if (currentAttachments.length >= MAX_TOTAL_ATTACHMENTS) break;
-                if (file.size > 50 * 1024 * 1024) {
-                    alert(`文件 "${file.name}" 超过50MB，无法添加`);
-                    continue;
-                }
+    function removeAttachment(index) {
+        if (index >= 0 && index < currentAttachments.length) {
+            currentAttachments.splice(index, 1);
+            renderAttachmentPreviews();
+            updateAttachButtonState();
+            updateImageDetailVisibility();
+            updateTokenEstimate();
+        }
+    }
+
+    function clearAttachments() {
+        currentAttachments = [];
+        renderAttachmentPreviews();
+        updateAttachButtonState();
+        updateImageDetailVisibility();
+        updateTokenEstimate();
+    }
+
+    function renderAttachmentPreviews() {
+        const container = document.getElementById('attachments-preview');
+        if (!container) return;
+        if (currentAttachments.length === 0) { container.innerHTML = ''; return; }
+        container.innerHTML = currentAttachments.map((att, idx) => {
+            let thumbHtml = '';
+            if (att.isImage && att.fullDataUrl) {
+                thumbHtml = `<img src="${att.fullDataUrl}" alt="${escapeHtml(att.name)}" class="attachment-thumb" onclick="viewAttachmentImage(${idx})" title="点击查看大图">`;
+            } else {
+                let iconName = 'file-text';
+                if (att.isDocx) iconName = 'file-text';
+                else if (att.isPptx) iconName = 'presentation';
+                else if (att.isXlsx) iconName = 'table';
+                thumbHtml = `<div class="attachment-file-icon"><i data-lucide="${iconName}" class="w-8 h-8 text-gray-400"></i></div>`;
+            }
+            return `<div class="attachment-card"><button class="attachment-remove" onclick="removeAttachment(${idx})" title="移除">×</button>${thumbHtml}<span class="attachment-name" title="${escapeHtml(att.name)}">${escapeHtml(att.name)}</span></div>`;
+        }).join('');
+        lucide.createIcons();
+    }
+
+    function viewAttachmentImage(index) {
+        const att = currentAttachments[index];
+        if (!att || !att.isImage || !att.fullDataUrl) return;
+        const lightbox = document.getElementById('image-lightbox');
+        const img = document.getElementById('lightbox-img');
+        img.src = att.fullDataUrl;
+        lightbox.classList.remove('hidden');
+        lightbox.classList.add('flex');
+    }
+
+    function closeLightbox() {
+        const lightbox = document.getElementById('image-lightbox');
+        lightbox.classList.add('hidden');
+        lightbox.classList.remove('flex');
+    }
+
+    function updateAttachButtonState() {
+        const btn = document.getElementById('attach-btn');
+        if (currentAttachments.length > 0) {
+            btn.classList.add('has-files');
+            btn.title = `已附加 ${currentAttachments.length} 个文件`;
+        } else {
+            btn.classList.remove('has-files');
+            btn.title = '添加文件';
+        }
+    }
+
+    function handlePaste(e) {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        const imageItems = [];
+        for (const item of items) { if (item.type.startsWith('image/')) imageItems.push(item); }
+        if (imageItems.length === 0) return;
+        e.preventDefault();
+        const MAX_TOTAL = 8;
+        if (currentAttachments.length + imageItems.length > MAX_TOTAL) {
+            alert(`最多只能附加 ${MAX_TOTAL} 个文件，当前已有 ${currentAttachments.length} 个`);
+            return;
+        }
+        (async () => {
+            for (const item of imageItems) {
+                if (currentAttachments.length >= MAX_TOTAL) break;
+                const blob = item.getAsFile();
+                if (!blob) continue;
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const ext = blob.type.split('/')[1] || 'png';
+                const fileName = `粘贴图片_${timestamp}.${ext}`;
+                const file = new File([blob], fileName, { type: blob.type });
                 try {
                     const attachment = await readFileAsAttachment(file);
                     currentAttachments.push(attachment);
-                } catch (err) {
-                    console.error('读取文件失败:', file.name, err);
-                    alert(`读取文件 "${file.name}" 失败: ${err.message}`);
-                }
+                } catch (err) { console.error('粘贴图片处理失败:', err); }
             }
             renderAttachmentPreviews();
             updateAttachButtonState();
             updateImageDetailVisibility();
             updateTokenEstimate();
-        }
+        })();
+    }
 
-        async function extractTextFromDocx(file) {
-            if (typeof mammoth === 'undefined') {
-                throw new Error('Mammoth.js 库未加载，无法解析docx');
-            }
-            const arrayBuffer = await file.arrayBuffer();
-            const result = await mammoth.extractRawText({ arrayBuffer });
-            const text = result.value;
-            if (!text || !text.trim()) throw new Error('未能从DOCX中提取到文本内容');
-            return text.trim();
-        }
-
-        async function extractTextFromPptx(file) {
-            if (typeof pptxtojson === 'undefined') {
-                throw new Error('pptxtojson 库未加载，无法解析pptx');
-            }
-            const arrayBuffer = await file.arrayBuffer();
-            const jsonData = await pptxtojson.parse(arrayBuffer, { imageMode: 'none' });
-            const slides = jsonData.slides || [];
-            let fullText = '';
-            slides.forEach((slide, idx) => {
-                const slideTexts = [];
-                if (slide.note) {
-                    slideTexts.push(`[备注]: ${slide.note}`);
-                }
-                if (slide.elements && Array.isArray(slide.elements)) {
-                    slide.elements.forEach(el => {
-                        if (el.content) {
-                            const plainText = el.content
-                                .replace(/<[^>]*>/g, '')
-                                .replace(/&amp;/g, '&')
-                                .replace(/&lt;/g, '<')
-                                .replace(/&gt;/g, '>')
-                                .replace(/&quot;/g, '"')
-                                .replace(/&#39;/g, "'");
-                            if (plainText.trim()) {
-                                slideTexts.push(plainText.trim());
-                            }
-                        }
-                    });
-                }
-                if (slideTexts.length > 0) {
-                    if (fullText) fullText += '\n\n';
-                    fullText += `--- 幻灯片 ${idx + 1} ---\n${slideTexts.join('\n')}`;
-                }
-            });
-            if (!fullText.trim()) throw new Error('未能从PPTX中提取到文本内容');
-            return fullText.trim();
-        }
-
-        async function extractTextFromXlsx(file) {
-            if (typeof XLSX === 'undefined') {
-                throw new Error('SheetJS 库未加载，无法解析xlsx');
-            }
-            const arrayBuffer = await file.arrayBuffer();
-            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-            const sheetNames = workbook.SheetNames;
-            let allText = '';
-            for (const name of sheetNames) {
-                const sheet = workbook.Sheets[name];
-                const csv = XLSX.utils.sheet_to_csv(sheet, { strip: true });
-                if (csv.trim()) {
-                    if (allText) allText += '\n\n';
-                    allText += `=== 工作表: ${name} ===\n${csv}`;
-                }
-            }
-            if (!allText.trim()) throw new Error('未能从XLSX中提取到数据');
-            return allText.trim();
-        }
-
-        function readFileAsAttachment(file) {
-            return new Promise(async (resolve, reject) => {
-                const fileName = file.name || '';
-                const fileType = file.type || '';
-
-                const isOldPpt = fileName.endsWith('.ppt') && !fileName.endsWith('.pptx') || fileType ===
-                    'application/vnd.ms-powerpoint';
-                const isOldXls = fileName.endsWith('.xls') && !fileName.endsWith('.xlsx') || fileType ===
-                    'application/vnd.ms-excel';
-                const isOldDoc = fileName.endsWith('.doc') && !fileName.endsWith('.docx') || fileType ===
-                    'application/msword';
-
-                if (isOldPpt) {
-                    reject(new Error('暂不支持旧版.ppt格式，请转换为.pptx后上传'));
-                    return;
-                }
-                if (isOldXls) {
-                    reject(new Error('暂不支持旧版.xls格式，请转换为.xlsx后上传'));
-                    return;
-                }
-                if (isOldDoc) {
-                    reject(new Error('暂不支持旧版.doc格式，请转换为.docx后上传'));
-                    return;
-                }
-
-                if (fileName.endsWith('.docx') || fileType ===
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-                    try {
-                        const extractedText = await extractTextFromDocx(file);
-                        resolve({
-                            name: file.name,
-                            type: 'text/plain',
-                            data: extractedText,
-                            fullDataUrl: null,
-                            size: extractedText.length,
-                            originalSize: file.size,
-                            isImage: false,
-                            isText: true,
-                            isDocx: true
-                        });
-                    } catch (err) {
-                        reject(new Error(`解析docx失败: ${err.message}`));
-                    }
-                    return;
-                }
-
-                if (fileName.endsWith('.pptx') || fileType ===
-                    'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
-                    try {
-                        const extractedText = await extractTextFromPptx(file);
-                        resolve({
-                            name: file.name,
-                            type: 'text/plain',
-                            data: extractedText,
-                            fullDataUrl: null,
-                            size: extractedText.length,
-                            originalSize: file.size,
-                            isImage: false,
-                            isText: true,
-                            isPptx: true
-                        });
-                    } catch (err) {
-                        reject(new Error(`解析pptx失败: ${err.message}`));
-                    }
-                    return;
-                }
-
-                if (fileName.endsWith('.xlsx') || fileType ===
-                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
-                    try {
-                        const extractedText = await extractTextFromXlsx(file);
-                        resolve({
-                            name: file.name,
-                            type: 'text/plain',
-                            data: extractedText,
-                            fullDataUrl: null,
-                            size: extractedText.length,
-                            originalSize: file.size,
-                            isImage: false,
-                            isText: true,
-                            isXlsx: true
-                        });
-                    } catch (err) {
-                        reject(new Error(`解析xlsx失败: ${err.message}`));
-                    }
-                    return;
-                }
-
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = async (e) => {
-                        try {
-                            let base64Data = e.target.result;
-                            // 使用图片精细度配置
-                            const detailConfig = getImageDetailConfig();
-                            if (detailConfig.maxWidth !== Infinity) {
-                                base64Data = await compressImage(base64Data, detailConfig.maxWidth, detailConfig
-                                    .quality);
-                            }
-                            resolve({
-                                name: file.name,
-                                type: file.type,
-                                data: base64Data.split(',')[1] || base64Data,
-                                fullDataUrl: base64Data,
-                                size: Math.round(base64Data.length * 0.75),
-                                originalSize: file.size,
-                                isImage: true
-                            });
-                        } catch (err) { reject(err); }
-                    };
-                    reader.onerror = () => reject(new Error('读取图片失败'));
-                    reader.readAsDataURL(file);
-                } else {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const textContent = e.target.result;
-                        resolve({
-                            name: file.name,
-                            type: file.type || 'text/plain',
-                            data: textContent,
-                            fullDataUrl: null,
-                            size: textContent.length,
-                            originalSize: file.size,
-                            isImage: false,
-                            isText: true
-                        });
-                    };
-                    reader.onerror = () => reject(new Error('读取文件失败'));
-                    reader.readAsText(file);
-                }
-            });
-        }
-
-        function removeAttachment(index) {
-            if (index >= 0 && index < currentAttachments.length) {
-                currentAttachments.splice(index, 1);
-                renderAttachmentPreviews();
-                updateAttachButtonState();
-                updateImageDetailVisibility();
-                updateTokenEstimate();
-            }
-        }
-
-        function clearAttachments() {
-            currentAttachments = [];
-            renderAttachmentPreviews();
-            updateAttachButtonState();
-            updateImageDetailVisibility();
-            updateTokenEstimate();
-        }
-
-        function renderAttachmentPreviews() {
-            const container = document.getElementById('attachments-preview');
-            if (!container) return;
-            if (currentAttachments.length === 0) { container.innerHTML = ''; return; }
-            container.innerHTML = currentAttachments.map((att, idx) => {
-                let thumbHtml = '';
-                if (att.isImage && att.fullDataUrl) {
-                    thumbHtml =
-                        `<img src="${att.fullDataUrl}" alt="${escapeHtml(att.name)}" class="attachment-thumb" onclick="viewAttachmentImage(${idx})" title="点击查看大图">`;
-                } else {
-                    let iconName = 'file-text';
-                    if (att.isDocx) iconName = 'file-text';
-                    else if (att.isPptx) iconName = 'presentation';
-                    else if (att.isXlsx) iconName = 'table';
-                    thumbHtml = `
-                        <div class="attachment-file-icon">
-                            <i data-lucide="${iconName}" class="w-8 h-8 text-gray-400"></i>
-                        </div>`;
-                }
-                return `
-                    <div class="attachment-card">
-                        <button class="attachment-remove" onclick="removeAttachment(${idx})" title="移除">×</button>
-                        ${thumbHtml}
-                        <span class="attachment-name" title="${escapeHtml(att.name)}">${escapeHtml(att.name)}</span>
-                    </div>
-                `;
-            }).join('');
-            lucide.createIcons();
-            // 注意：这里不调用 updateImageDetailVisibility，因为 renderAttachmentPreviews 可能在多个地方调用，需要保持同步
-            // 但调用方已负责调用 updateImageDetailVisibility
-        }
-
-        function viewAttachmentImage(index) {
-            const att = currentAttachments[index];
-            if (!att || !att.isImage || !att.fullDataUrl) return;
-            const lightbox = document.getElementById('image-lightbox');
-            const img = document.getElementById('lightbox-img');
-            img.src = att.fullDataUrl;
-            lightbox.classList.remove('hidden');
-            lightbox.classList.add('flex');
-        }
-
-        function closeLightbox() {
-            const lightbox = document.getElementById('image-lightbox');
-            lightbox.classList.add('hidden');
-            lightbox.classList.remove('flex');
-        }
-
-        function updateAttachButtonState() {
-            const btn = document.getElementById('attach-btn');
-            if (currentAttachments.length > 0) {
-                btn.classList.add('has-files');
-                btn.title = `已附加 ${currentAttachments.length} 个文件`;
-            } else {
-                btn.classList.remove('has-files');
-                btn.title = '添加文件';
-            }
-        }
-
-        function handlePaste(e) {
-            const items = e.clipboardData?.items;
-            if (!items) return;
-            const imageItems = [];
-            for (const item of items) {
-                if (item.type.startsWith('image/')) {
-                    imageItems.push(item);
-                }
-            }
-            if (imageItems.length === 0) return;
-            e.preventDefault();
-            const MAX_TOTAL = 8;
-            if (currentAttachments.length + imageItems.length > MAX_TOTAL) {
-                alert(`最多只能附加 ${MAX_TOTAL} 个文件，当前已有 ${currentAttachments.length} 个`);
-                return;
-            }
-            (async () => {
-                for (const item of imageItems) {
-                    if (currentAttachments.length >= MAX_TOTAL) break;
-                    const blob = item.getAsFile();
-                    if (!blob) continue;
-                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                    const ext = blob.type.split('/')[1] || 'png';
-                    const fileName = `粘贴图片_${timestamp}.${ext}`;
-                    const file = new File([blob], fileName, { type: blob.type });
-                    try {
-                        const attachment = await readFileAsAttachment(file);
-                        currentAttachments.push(attachment);
-                    } catch (err) { console.error('粘贴图片处理失败:', err); }
-                }
-                renderAttachmentPreviews();
-                updateAttachButtonState();
-                updateImageDetailVisibility();
-                updateTokenEstimate();
-            })();
-        }
-
-        function buildAPIMessagesWithTemp(chatMessages) {
-            const apiMessages = [];
-            for (let i = 0; i < chatMessages.length; i++) {
-                const msg = chatMessages[i];
-                const tempAtts = msg._tempAttachments;
-                const existingAtts = msg.attachments;
-                const attsToUse = tempAtts || existingAtts || [];
-                const isLastUser = (i === chatMessages.length - 1 && msg.role === 'user');
-
-                if (msg.role === 'user' && attsToUse.length > 0) {
-                    const contentArray = [];
-                    if (msg.content && msg.content.trim()) {
-                        contentArray.push({ type: 'text', text: msg.content });
-                    }
-                    for (const att of attsToUse) {
-                        if (att.isImage && att.fullDataUrl) {
-                            contentArray.push({ type: 'image_url', image_url: { url: att.fullDataUrl } });
-                        } else if ((att.isText) && att.data) {
-                            const existingTextIdx = contentArray.findIndex(c => c.type === 'text');
-                            const fileLabel = `\n\n[文件: ${att.name}]\n${att.data}\n[/文件: ${att.name}]`;
-                            if (existingTextIdx >= 0) {
-                                contentArray[existingTextIdx].text += fileLabel;
-                            } else {
-                                contentArray.push({ type: 'text', text: fileLabel });
-                            }
-                        }
-                    }
-                    if (contentArray.length === 1 && contentArray[0].type === 'text' && !isLastUser) {
-                        apiMessages.push({ role: 'user', content: contentArray[0].text });
-                    } else if (contentArray.length > 0) {
-                        apiMessages.push({ role: 'user', content: contentArray });
-                    } else {
-                        apiMessages.push({ role: 'user', content: msg.content || '' });
-                    }
-                } else {
-                    apiMessages.push({ role: msg.role, content: msg.content || '' });
-                }
-            }
-            chatMessages.forEach(m => delete m._tempAttachments);
-            return apiMessages;
-        }
-
-        function renderMessages(messages) {
-            const wrapper = document.getElementById('messages-wrapper');
-            wrapper.innerHTML = '';
-            if (!messages || messages.length === 0) {
-                const greetingText = getGreetingByTime();
-                const welcomeDiv = document.createElement('div');
-                welcomeDiv.className = 'h-full flex flex-col items-center justify-center text-center opacity-90';
-                welcomeDiv.innerHTML =
-                    `<h1 class="text-xl md:text-2xl font-bold mb-3 bg-gradient-to-r from-emerald-400 to-sky-400 bg-clip-text text-transparent">${greetingText}</h1>`;
-                wrapper.appendChild(welcomeDiv);
-                return;
-            }
-            messages.forEach((msg, idx) => {
-                const isLast = idx === messages.length - 1;
-                appendMessageToUI(msg.role, msg.content, msg.model, isLast && msg.role === 'assistant', msg
-                    .reasoning || '', msg.attachments || []);
-            });
-            wrapper.scrollTop = wrapper.scrollHeight;
-        }
-
-        function appendMessageToUI(role, content, model, showActions = false, reasoning = '', attachments = []) {
-            const wrapper = document.getElementById('messages-wrapper');
-            const isAI = role === 'assistant';
-            const row = document.createElement('div');
-            row.className = `chat-row`;
-            const contentCol = document.createElement('div');
-            contentCol.className = `flex flex-col w-full`;
-            if (isAI) {
-                const thinkingDiv = document.createElement('div');
-                thinkingDiv.className = 'thinking-text text-gray-400 text-xs mb-1';
-                if (reasoning) { thinkingDiv.innerText = reasoning; } else { thinkingDiv.style.display = 'none'; }
-                contentCol.appendChild(thinkingDiv);
-            }
-            const bubble = document.createElement('div');
-            bubble.className = `msg-bubble ${isAI ? 'ai-bubble' : 'user-bubble'}`;
-            if (content) {
-                bubble.innerHTML =
-                    `<div class="prose prose-invert prose-sm ai-content-area">${marked.parse(content)}</div>`;
-                const contentArea = bubble.querySelector('.ai-content-area');
-                if (contentArea) renderMathFormulas(contentArea);
-                bubble.querySelectorAll('pre').forEach(pre => {
-                    const code = pre.querySelector('code');
-                    if (code && !pre.querySelector('.code-copy-btn')) {
-                        const copyBtn = document.createElement('button');
-                        copyBtn.className = 'code-copy-btn';
-                        copyBtn.innerText = '复制代码';
-                        copyBtn.onclick = (e) => {
-                            e.stopPropagation();
-                            copyToClipboard(code.innerText, copyBtn);
-                        };
-                        pre.appendChild(copyBtn);
-                    }
-                });
-            } else {
-                bubble.innerHTML =
-                    `<div class="ai-content-area"><div class="animate-pulse text-gray-400 text-sm">AI 正在思考...</div></div>`;
-            }
-            if (!isAI && attachments && attachments.length > 0) {
-                const attContainer = document.createElement('div');
-                attContainer.className = 'msg-attachments';
-                attachments.forEach((att) => {
+    function buildAPIMessagesWithTemp(chatMessages) {
+        const apiMessages = [];
+        for (let i = 0; i < chatMessages.length; i++) {
+            const msg = chatMessages[i];
+            const tempAtts = msg._tempAttachments;
+            const existingAtts = msg.attachments;
+            const attsToUse = tempAtts || existingAtts || [];
+            const isLastUser = (i === chatMessages.length - 1 && msg.role === 'user');
+            if (msg.role === 'user' && attsToUse.length > 0) {
+                const contentArray = [];
+                if (msg.content && msg.content.trim()) contentArray.push({ type: 'text', text: msg.content });
+                for (const att of attsToUse) {
                     if (att.isImage && att.fullDataUrl) {
-                        const thumb = document.createElement('img');
-                        thumb.src = att.fullDataUrl;
-                        thumb.alt = att.name;
-                        thumb.className = 'msg-attachment-thumb';
-                        thumb.title = att.name + ' (点击查看大图)';
-                        thumb.onclick = () => {
-                            const lb = document.getElementById('image-lightbox');
-                            const lbImg = document.getElementById('lightbox-img');
-                            lbImg.src = att.fullDataUrl;
-                            lb.classList.remove('hidden');
-                            lb.classList.add('flex');
-                        };
-                        attContainer.appendChild(thumb);
-                    } else {
-                        const fileTag = document.createElement('span');
-                        fileTag.className =
-                            'text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded-xl inline-flex items-center gap-1';
-                        fileTag.innerHTML =
-                            `<i data-lucide="file-text" class="w-3 h-3"></i> ${escapeHtml(att.name)}`;
-                        attContainer.appendChild(fileTag);
-                    }
-                });
-                bubble.appendChild(attContainer);
-                lucide.createIcons();
-            }
-            contentCol.appendChild(bubble);
-            if (isAI) {
-                const footer = document.createElement('div');
-                footer.className = "flex items-center gap-2 mt-1.5 px-4 w-full flex-wrap";
-                const modelSpan = document.createElement('span');
-                modelSpan.className = "text-[13px] text-gray-500 font-bold font-mono uppercase";
-                modelSpan.innerText = model || document.getElementById('model-select').value;
-                const btnGroup = document.createElement('div');
-                btnGroup.className = "flex items-center gap-1";
-                const copyMsgBtn = document.createElement('span');
-                copyMsgBtn.className = 'action-btn';
-                copyMsgBtn.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制`;
-                copyMsgBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    copyToClipboard(content || '', copyMsgBtn);
-                };
-                const retryBtn = document.createElement('span');
-                retryBtn.className = 'action-btn';
-                retryBtn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> 重试`;
-                retryBtn.onclick = (e) => openRetryMenu(e);
-                btnGroup.appendChild(copyMsgBtn);
-                if (showActions) btnGroup.appendChild(retryBtn);
-                footer.appendChild(modelSpan);
-                footer.appendChild(btnGroup);
-                contentCol.appendChild(footer);
-            }
-            row.appendChild(contentCol);
-            wrapper.appendChild(row);
-            lucide.createIcons();
-            if (content) bubble.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
-            wrapper.scrollTop = wrapper.scrollHeight;
-            return row;
-        }
-
-        async function copyToClipboard(text, btnElement) {
-            try {
-                if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
-                else {
-                    const ta = document.createElement("textarea");
-                    ta.value = text;
-                    document.body.appendChild(ta);
-                    ta.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(ta);
-                }
-                const original = btnElement.innerHTML;
-                btnElement.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5"></i> 已复制`;
-                btnElement.style.color = "#10b981";
-                lucide.createIcons();
-                setTimeout(() => {
-                    btnElement.innerHTML = original;
-                    btnElement.style.color = "";
-                    lucide.createIcons();
-                }, 2000);
-            } catch (err) { console.error(err); }
-        }
-
-        async function lcFetch(path = '', options = {}) {
-            const url = path ? `${LC_CONFIG.base}/${path}` : LC_CONFIG.base;
-            const headers = {
-                'X-LC-Id': LC_CONFIG.id,
-                'X-LC-Key': options.master ? `${LC_CONFIG.masterKey},master` : LC_CONFIG.key,
-                'Content-Type': 'application/json'
-            };
-            return fetch(url, { ...options, headers: { ...headers, ...options.headers } });
-        }
-
-        function stripAttachmentsForCloud(messages) {
-            return messages.map(msg => {
-                if (msg.attachments && msg.attachments.length > 0) {
-                    const { attachments, ...rest } = msg;
-                    return rest;
-                }
-                return msg;
-            });
-        }
-
-        async function pushToCloud(chat, method) {
-            const cleanMessages = stripAttachmentsForCloud(chat.messages);
-            const body = {
-                chatId: chat.id,
-                title: chat.title,
-                messages: cleanMessages,
-                updatedAtMs: chat.updatedAt || Date.now()
-            };
-            const path = method === 'PUT' ? chat.lcObjectId : '';
-            try {
-                const res = await lcFetch(path, { method, body: JSON.stringify(body) });
-                const result = await res.json();
-                if (method === 'POST') chat.lcObjectId = result.objectId;
-                localStorage.setItem('ai_chats', JSON.stringify(chats));
-            } catch (e) {
-                console.error("云端同步失败", e);
-                throw e;
-            }
-        }
-
-        function setSyncUI(isSyncing) { document.getElementById('sync-status').classList.toggle('hidden', !isSyncing); }
-
-        async function syncData() {
-            setSyncUI(true);
-            try {
-                const res = await lcFetch();
-                if (!res.ok) throw new Error(`云端获取失败: ${res.status}`);
-                const data = await res.json();
-                const cloudChats = data.results || [];
-                let localChats = JSON.parse(localStorage.getItem('ai_chats') || '[]');
-                let hasLocalChange = false;
-                const cloudMap = new Map(cloudChats.map(c => [c.chatId, c]));
-                const localMap = new Map(localChats.map(c => [c.id, c]));
-                const localAttachmentsMap = new Map();
-                for (const l of localChats) {
-                    const attMap = [];
-                    l.messages.forEach((m, idx) => {
-                        if (m.attachments && m.attachments.length > 0) attMap.push({
-                            index: idx,
-                            attachments: m.attachments
-                        });
-                    });
-                    if (attMap.length > 0) localAttachmentsMap.set(l.id, attMap);
-                }
-                for (const c of cloudChats) {
-                    const l = localMap.get(c.chatId);
-                    if (!l || (c.updatedAtMs || 0) > (l.updatedAt || 0)) {
-                        const newLocal = {
-                            id: c.chatId,
-                            title: c.title,
-                            messages: c.messages,
-                            updatedAt: c.updatedAtMs || 0,
-                            lcObjectId: c.objectId
-                        };
-                        if (!l) localChats.push(newLocal);
-                        else Object.assign(l, newLocal);
-                        hasLocalChange = true;
+                        contentArray.push({ type: 'image_url', image_url: { url: att.fullDataUrl } });
+                    } else if ((att.isText) && att.data) {
+                        const existingTextIdx = contentArray.findIndex(c => c.type === 'text');
+                        const fileLabel = `\n\n[文件: ${att.name}]\n${att.data}\n[/文件: ${att.name}]`;
+                        if (existingTextIdx >= 0) contentArray[existingTextIdx].text += fileLabel;
+                        else contentArray.push({ type: 'text', text: fileLabel });
                     }
                 }
-                for (const [chatId, attMap] of localAttachmentsMap) {
-                    const chat = localChats.find(c => c.id === chatId);
-                    if (chat) {
-                        for (const { index, attachments } of attMap) {
-                            if (index < chat.messages.length) chat.messages[index].attachments = attachments;
-                        }
-                    }
-                }
-                const pushPromises = [];
-                for (const l of localChats) {
-                    const c = cloudMap.get(l.id);
-                    if (!c) pushPromises.push(pushToCloud(l, 'POST'));
-                    else if ((l.updatedAt || 0) > (c.updatedAtMs || 0)) {
-                        l.lcObjectId = c.objectId;
-                        pushPromises.push(pushToCloud(l, 'PUT'));
-                    }
-                }
-                await Promise.all(pushPromises);
-                if (hasLocalChange) {
-                    localChats.sort((a, b) => b.updatedAt - a.updatedAt);
-                    chats = localChats;
-                    localStorage.setItem('ai_chats', JSON.stringify(chats));
-                    renderChatHistory();
-                    if (activeChatId) {
-                        const currentChat = chats.find(c => c.id === activeChatId);
-                        if (currentChat)
-                            renderMessages(currentChat.messages);
-                    }
-                }
-            } catch (err) { console.error("同步异常:", err); } finally { setSyncUI(false); }
-        }
-
-        function toggleSidebar(show) {
-            document.getElementById('sidebar').classList.toggle('active', show);
-            document.getElementById('sidebar-overlay').classList.toggle('active', show);
-        }
-
-        function toggleSettings() {
-            const modal = document.getElementById('settings-modal');
-            modal.classList.toggle('flex');
-            modal.classList.toggle('hidden');
-            if (modal.classList.contains('flex')) renderMemoriesToSettings();
-            lucide.createIcons();
-        }
-
-        function setTemp(val, btn) {
-            currentTemp = val;
-            document.querySelectorAll('.temp-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        }
-
-        function setFontSize(size, btn) {
-            currentFontSize = size;
-            document.body.classList.remove('font-size-small', 'font-size-medium', 'font-size-large');
-            document.body.classList.add(`font-size-${size}`);
-            document.querySelectorAll('.font-btn').forEach(b => b.classList.toggle('active', b.dataset.size === size));
-        }
-
-        function setTheme(theme, save = true) {
-            document.body.classList.remove('theme-light', 'theme-dark');
-            document.body.classList.add(`theme-${theme}`);
-            if (save) localStorage.setItem('theme', theme);
-            updateBackgroundImage();
-            lucide.createIcons();
-        }
-
-        function setBackgroundImage(num, btn) {
-            selectedBackgroundImage = num;
-            document.querySelectorAll('[id^="bg-thumb-"]').forEach(img => { img.style.borderColor = '#4b5563'; });
-            btn.style.borderColor = '#10b981';
-            updateBackgroundImage();
-        }
-
-        function saveSettings() {
-            systemPrompt = document.getElementById('sys-prompt').value;
-            localStorage.setItem('sys_prompt', systemPrompt);
-            localStorage.setItem('chat_temp', currentTemp);
-            localStorage.setItem('font_size', currentFontSize);
-            localStorage.setItem('bg_image', selectedBackgroundImage);
-            const apiKeyInput = document.getElementById('api-key-input').value.trim();
-            const baseUrlInput = document.getElementById('base-url-input').value.trim();
-            if (apiKeyInput) localStorage.setItem('api_key', apiKeyInput);
-            else localStorage.removeItem('api_key');
-            if (baseUrlInput) localStorage.setItem('base_url', baseUrlInput);
-            else localStorage.removeItem('base_url');
-            const maxTokensVal = parseInt(document.getElementById('max-tokens-input').value) || 0;
-            localStorage.setItem('max_tokens_limit', maxTokensVal);
-            maxTokensLimit = maxTokensVal;
-            toggleSettings();
-            updateTokenEstimate();
-        }
-
-        function updateBackgroundImage() {
-            const bgNum = selectedBackgroundImage;
-            const newUrl = `${bgNum}.JPG`;
-            if (document.body.classList.contains('theme-light')) {
-                document.body.style.background =
-                    `linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6)), url('${newUrl}') center/cover fixed`;
+                if (contentArray.length === 1 && contentArray[0].type === 'text' && !isLastUser) apiMessages.push({ role: 'user', content: contentArray[0].text });
+                else if (contentArray.length > 0) apiMessages.push({ role: 'user', content: contentArray });
+                else apiMessages.push({ role: 'user', content: msg.content || '' });
             } else {
-                document.body.style.background =
-                    `linear-gradient(145deg, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.6)), url('${newUrl}') center/cover fixed`;
+                apiMessages.push({ role: msg.role, content: msg.content || '' });
             }
         }
+        chatMessages.forEach(m => delete m._tempAttachments);
+        return apiMessages;
+    }
 
-        const INPUT_EXPAND_THRESHOLD = 100;
+    function renderMessages(messages) {
+        const wrapper = document.getElementById('messages-wrapper');
+        wrapper.innerHTML = '';
+        if (!messages || messages.length === 0) {
+            const greetingText = getGreetingByTime();
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'h-full flex flex-col items-center justify-center text-center opacity-90';
+            welcomeDiv.innerHTML = `<h1 class="text-xl md:text-2xl font-bold mb-3 bg-gradient-to-r from-emerald-400 to-sky-400 bg-clip-text text-transparent">${greetingText}</h1>`;
+            wrapper.appendChild(welcomeDiv);
+            return;
+        }
+        messages.forEach((msg, idx) => {
+            const isLast = idx === messages.length - 1;
+            appendMessageToUI(msg.role, msg.content, msg.model, isLast && msg.role === 'assistant', msg.reasoning || '', msg.attachments || []);
+        });
+        wrapper.scrollTop = wrapper.scrollHeight;
+    }
 
-        function autoResize(t) {
-            t.style.height = 'auto';
-            t.style.height = t.scrollHeight + 'px';
-            const footer = document.getElementById('input-footer');
-            if (footer) {
-                if (t.scrollHeight > INPUT_EXPAND_THRESHOLD) { footer.classList.add('input-expanded'); } else {
-                    footer.classList.remove('input-expanded');
+    function appendMessageToUI(role, content, model, showActions = false, reasoning = '', attachments = []) {
+        const wrapper = document.getElementById('messages-wrapper');
+        const isAI = role === 'assistant';
+        const row = document.createElement('div');
+        row.className = `chat-row`;
+        const contentCol = document.createElement('div');
+        contentCol.className = `flex flex-col w-full`;
+        if (isAI) {
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'thinking-text text-gray-400 text-xs mb-1';
+            if (reasoning) { thinkingDiv.innerText = reasoning; } else { thinkingDiv.style.display = 'none'; }
+            contentCol.appendChild(thinkingDiv);
+        }
+        const bubble = document.createElement('div');
+        bubble.className = `msg-bubble ${isAI ? 'ai-bubble' : 'user-bubble'}`;
+        if (content) {
+            bubble.innerHTML = `<div class="prose prose-invert prose-sm ai-content-area">${marked.parse(content)}</div>`;
+            const contentArea = bubble.querySelector('.ai-content-area');
+            if (contentArea) renderMathFormulas(contentArea);
+            bubble.querySelectorAll('pre').forEach(pre => {
+                const code = pre.querySelector('code');
+                if (code && !pre.querySelector('.code-copy-btn') && !pre.closest('.canvas-replace-notice')) {
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'code-copy-btn';
+                    copyBtn.innerText = '复制代码';
+                    copyBtn.onclick = (e) => { e.stopPropagation(); copyToClipboard(code.innerText, copyBtn); };
+                    pre.appendChild(copyBtn);
                 }
-            }
-            updateTokenEstimate();
-        }
-
-        function resetInputState() {
-            const input = document.getElementById('user-input');
-            const footer = document.getElementById('input-footer');
-            input.style.height = 'auto';
-            input.value = '';
-            if (footer) footer.classList.remove('input-expanded');
-            updateTokenEstimate();
-        }
-
-        function syncRetrySelect() {
-            const mainSelect = document.getElementById('model-select');
-            const retrySelect = document.getElementById('retry-model-select');
-            retrySelect.innerHTML = mainSelect.innerHTML;
-        }
-
-        function openRetryMenu(e) {
-            e.stopPropagation();
-            const popover = document.getElementById('retry-popover');
-            popover.style.left = `${e.clientX - 10}px`;
-            popover.style.top = `${e.clientY + 15}px`;
-            popover.classList.remove('hidden');
-        }
-
-        function closeRetryMenu(e) {
-            const popover = document.getElementById('retry-popover');
-            if (popover && !popover.contains(e.target)) popover.classList.add('hidden');
-        }
-
-        function confirmRetry() {
-            const selectedModel = document.getElementById('retry-model-select').value;
-            document.getElementById('retry-popover').classList.add('hidden');
-            const chat = chats.find(c => c.id === activeChatId);
-            if (!chat || chat.messages.length === 0) return;
-            if (chat.messages[chat.messages.length - 1].role === 'assistant') chat.messages.pop();
-            const lastUserMsg = chat.messages[chat.messages.length - 1];
-            if (!lastUserMsg || lastUserMsg.role !== 'user') return;
-            renderMessages(chat.messages);
-            const retryAttachments = lastUserMsg.attachments || [];
-            requestAI(lastUserMsg.content, selectedModel, chat, retryAttachments);
-        }
-
-        function stopGeneration() {
-            if (abortController) {
-                abortController.abort();
-                abortController = null;
-                isGenerating = false;
-                document.getElementById('send-btn').classList.remove('hidden');
-                document.getElementById('stop-btn').classList.add('hidden');
-            }
-        }
-
-        function renderChatHistory() {
-            filteredChats = chats;
-            renderFilteredHistory();
-        }
-
-        function filterChats() {
-            const searchTerm = document.getElementById('chat-search')?.value?.toLowerCase()?.trim() || '';
-            filteredChats = searchTerm ? chats.filter(chat => chat.title.toLowerCase().includes(searchTerm)) : chats;
-            renderFilteredHistory();
-        }
-
-        function renderFilteredHistory() {
-            const container = document.getElementById('chat-history');
-            container.innerHTML = '';
-            (filteredChats.length ? filteredChats : chats).forEach(chat => {
-                const btn = document.createElement('button');
-                btn.className =
-                    `w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors text-sm ${activeChatId === chat.id ? 'active-chat' : ''}`;
-                btn.innerHTML =
-                    `<i data-lucide="message-square" class="w-4 h-4 text-gray-400 flex-shrink-0"></i><span class="truncate text-left flex-grow">${chat.title}</span><span class="delete-chat-btn p-1" data-chat-id="${chat.id}" onclick="event.stopPropagation(); deleteChat('${chat.id}')"><i data-lucide="trash-2" class="w-4 h-4 text-gray-400"></i></span>`;
-                btn.onclick = () => switchChat(chat.id);
-                container.appendChild(btn);
             });
+        } else {
+            bubble.innerHTML = `<div class="ai-content-area"><div class="animate-pulse text-gray-400 text-sm">AI 正在思考...</div></div>`;
+        }
+        if (!isAI && attachments && attachments.length > 0) {
+            const attContainer = document.createElement('div');
+            attContainer.className = 'msg-attachments';
+            attachments.forEach((att) => {
+                if (att.isImage && att.fullDataUrl) {
+                    const thumb = document.createElement('img');
+                    thumb.src = att.fullDataUrl;
+                    thumb.alt = att.name;
+                    thumb.className = 'msg-attachment-thumb';
+                    thumb.title = att.name + ' (点击查看大图)';
+                    thumb.onclick = () => { const lb = document.getElementById('image-lightbox'); const lbImg = document.getElementById('lightbox-img'); lbImg.src = att.fullDataUrl; lb.classList.remove('hidden'); lb.classList.add('flex'); };
+                    attContainer.appendChild(thumb);
+                } else {
+                    const fileTag = document.createElement('span');
+                    fileTag.className = 'text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded-xl inline-flex items-center gap-1';
+                    fileTag.innerHTML = `<i data-lucide="file-text" class="w-3 h-3"></i> ${escapeHtml(att.name)}`;
+                    attContainer.appendChild(fileTag);
+                }
+            });
+            bubble.appendChild(attContainer);
             lucide.createIcons();
         }
+        contentCol.appendChild(bubble);
+        if (isAI) {
+            const footer = document.createElement('div');
+            footer.className = "flex items-center gap-2 mt-1.5 px-4 w-full flex-wrap";
+            const modelSpan = document.createElement('span');
+            modelSpan.className = "text-[13px] text-gray-500 font-bold font-mono uppercase";
+            modelSpan.innerText = model || document.getElementById('model-select').value;
+            const btnGroup = document.createElement('div');
+            btnGroup.className = "flex items-center gap-1";
+            const copyMsgBtn = document.createElement('span');
+            copyMsgBtn.className = 'action-btn';
+            copyMsgBtn.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制`;
+            copyMsgBtn.onclick = (e) => { e.stopPropagation(); copyToClipboard(content || '', copyMsgBtn); };
+            const retryBtn = document.createElement('span');
+            retryBtn.className = 'action-btn';
+            retryBtn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> 重试`;
+            retryBtn.onclick = (e) => openRetryMenu(e);
+            btnGroup.appendChild(copyMsgBtn);
+            if (showActions) btnGroup.appendChild(retryBtn);
+            footer.appendChild(modelSpan);
+            footer.appendChild(btnGroup);
+            contentCol.appendChild(footer);
+        }
+        row.appendChild(contentCol);
+        wrapper.appendChild(row);
+        lucide.createIcons();
+        if (content) bubble.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+        wrapper.scrollTop = wrapper.scrollHeight;
+        return row;
+    }
 
-        async function deleteChat(chatId) {
-            if (!confirm('确定删除此对话？')) return;
-            const chat = chats.find(c => c.id === chatId);
-            if (!chat) return;
-            if (chat.lcObjectId) {
-                try {
-                    const deleteUrl = `${LC_CONFIG.base}/${chat.lcObjectId}`;
-                    await fetch(deleteUrl, {
-                        method: 'DELETE',
-                        headers: {
-                            'X-LC-Id': LC_CONFIG.id,
-                            'X-LC-Key': `${LC_CONFIG.masterKey},master`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                } catch (e) { alert('云端删除失败，请稍后再试。'); return; }
+    async function copyToClipboard(text, btnElement) {
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
+            else {
+                const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
             }
-            const index = chats.findIndex(c => c.id === chatId);
-            if (index !== -1) chats.splice(index, 1);
+            const original = btnElement.innerHTML;
+            btnElement.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5"></i> 已复制`;
+            btnElement.style.color = "#10b981";
+            lucide.createIcons();
+            setTimeout(() => { btnElement.innerHTML = original; btnElement.style.color = ""; lucide.createIcons(); }, 2000);
+        } catch (err) { console.error(err); }
+    }
+
+    async function lcFetch(path = '', options = {}) {
+        const url = path ? `${LC_CONFIG.base}/${path}` : LC_CONFIG.base;
+        const headers = { 'X-LC-Id': LC_CONFIG.id, 'X-LC-Key': options.master ? `${LC_CONFIG.masterKey},master` : LC_CONFIG.key, 'Content-Type': 'application/json' };
+        return fetch(url, { ...options, headers: { ...headers, ...options.headers } });
+    }
+
+    function stripAttachmentsForCloud(messages) {
+        return messages.map(msg => { if (msg.attachments && msg.attachments.length > 0) { const { attachments, ...rest } = msg; return rest; } return msg; });
+    }
+
+    async function pushToCloud(chat, method) {
+        const cleanMessages = stripAttachmentsForCloud(chat.messages);
+        const body = { chatId: chat.id, title: chat.title, messages: cleanMessages, updatedAtMs: chat.updatedAt || Date.now(), canvasEnabled: chat.canvasEnabled || false, canvasCode: chat.canvasCode || [''] };
+        const path = method === 'PUT' ? chat.lcObjectId : '';
+        try {
+            const res = await lcFetch(path, { method, body: JSON.stringify(body) });
+            const result = await res.json();
+            if (method === 'POST') chat.lcObjectId = result.objectId;
             localStorage.setItem('ai_chats', JSON.stringify(chats));
-            if (activeChatId === chatId) {
-                if (chats.length > 0) switchChat(chats[0].id);
-                else createNewChat();
+        } catch (e) { console.error("云端同步失败", e); throw e; }
+    }
+
+    function setSyncUI(isSyncing) { document.getElementById('sync-status').classList.toggle('hidden', !isSyncing); }
+
+    async function syncData() {
+        setSyncUI(true);
+        try {
+            const res = await lcFetch();
+            if (!res.ok) throw new Error(`云端获取失败: ${res.status}`);
+            const data = await res.json();
+            const cloudChats = data.results || [];
+            let localChats = JSON.parse(localStorage.getItem('ai_chats') || '[]');
+            let hasLocalChange = false;
+            const cloudMap = new Map(cloudChats.map(c => [c.chatId, c]));
+            const localMap = new Map(localChats.map(c => [c.id, c]));
+            const localAttachmentsMap = new Map();
+            for (const l of localChats) {
+                const attMap = [];
+                l.messages.forEach((m, idx) => { if (m.attachments && m.attachments.length > 0) attMap.push({ index: idx, attachments: m.attachments }); });
+                if (attMap.length > 0) localAttachmentsMap.set(l.id, attMap);
             }
-            filterChats();
+            for (const c of cloudChats) {
+                const l = localMap.get(c.chatId);
+                if (!l || (c.updatedAtMs || 0) > (l.updatedAt || 0)) {
+                    const newLocal = { id: c.chatId, title: c.title, messages: c.messages, updatedAt: c.updatedAtMs || 0, lcObjectId: c.objectId, canvasEnabled: c.canvasEnabled || false, canvasCode: c.canvasCode || [''] };
+                    if (!l) localChats.push(newLocal);
+                    else Object.assign(l, newLocal);
+                    hasLocalChange = true;
+                }
+            }
+            for (const [chatId, attMap] of localAttachmentsMap) {
+                const chat = localChats.find(c => c.id === chatId);
+                if (chat) { for (const { index, attachments } of attMap) { if (index < chat.messages.length) chat.messages[index].attachments = attachments; } }
+            }
+            const pushPromises = [];
+            for (const l of localChats) {
+                const c = cloudMap.get(l.id);
+                if (!c) pushPromises.push(pushToCloud(l, 'POST'));
+                else if ((l.updatedAt || 0) > (c.updatedAtMs || 0)) { l.lcObjectId = c.objectId; pushPromises.push(pushToCloud(l, 'PUT')); }
+            }
+            await Promise.all(pushPromises);
+            if (hasLocalChange) {
+                localChats.sort((a, b) => b.updatedAt - a.updatedAt);
+                chats = localChats;
+                localStorage.setItem('ai_chats', JSON.stringify(chats));
+                renderChatHistory();
+                if (activeChatId) { const currentChat = chats.find(c => c.id === activeChatId); if (currentChat) { renderMessages(currentChat.messages); updateCanvasPanelForChat(currentChat); } }
+            }
+        } catch (err) { console.error("同步异常:", err); } finally { setSyncUI(false); }
+    }
+
+    function toggleSidebar(show) { document.getElementById('sidebar').classList.toggle('active', show); document.getElementById('sidebar-overlay').classList.toggle('active', show); }
+    function toggleSettings() { const modal = document.getElementById('settings-modal'); modal.classList.toggle('flex'); modal.classList.toggle('hidden'); if (modal.classList.contains('flex')) renderMemoriesToSettings(); lucide.createIcons(); }
+    function setTemp(val, btn) { currentTemp = val; document.querySelectorAll('.temp-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+    function setFontSize(size, btn) {
+        currentFontSize = size;
+        document.body.classList.remove('font-size-small', 'font-size-medium', 'font-size-large');
+        document.body.classList.add(`font-size-${size}`);
+        document.querySelectorAll('.font-btn').forEach(b => b.classList.toggle('active', b.dataset.size === size));
+    }
+    function setTheme(theme, save = true) {
+        document.body.classList.remove('theme-light', 'theme-dark');
+        document.body.classList.add(`theme-${theme}`);
+        if (save) localStorage.setItem('theme', theme);
+        updateBackgroundImage();
+        if (cmEditor) {
+            cmEditor.setOption('theme', theme === 'light' ? 'default' : 'material-darker');
+        }
+        lucide.createIcons();
+    }
+    function setBackgroundImage(num, btn) { selectedBackgroundImage = num; document.querySelectorAll('[id^="bg-thumb-"]').forEach(img => { img.style.borderColor = '#4b5563'; }); btn.style.borderColor = '#10b981'; updateBackgroundImage(); }
+
+    function setCanvasFontSize(size, btn) {
+        currentCanvasFontSize = size;
+        localStorage.setItem('canvas_font_size', size);
+        document.querySelectorAll('.code-size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === size));
+        const sizeMap = { small: '12px', medium: '14px', large: '16px' };
+        const targetSize = sizeMap[size] || '14px';
+        if (cmEditor) {
+            cmEditor.getWrapperElement().style.fontSize = targetSize;
+            cmEditor.refresh();
+        } else {
+            document.querySelector('.CodeMirror').style.fontSize = targetSize;
+        }
+    }
+
+    function saveSettings() {
+        systemPrompt = document.getElementById('sys-prompt').value; localStorage.setItem('sys_prompt', systemPrompt);
+        localStorage.setItem('chat_temp', currentTemp); localStorage.setItem('font_size', currentFontSize); localStorage.setItem('bg_image', selectedBackgroundImage);
+        localStorage.setItem('canvas_font_size', currentCanvasFontSize);
+        const apiKeyInput = document.getElementById('api-key-input').value.trim(); const baseUrlInput = document.getElementById('base-url-input').value.trim();
+        if (apiKeyInput) localStorage.setItem('api_key', apiKeyInput); else localStorage.removeItem('api_key');
+        if (baseUrlInput) localStorage.setItem('base_url', baseUrlInput); else localStorage.removeItem('base_url');
+        const maxTokensVal = parseInt(document.getElementById('max-tokens-input').value) || 0; localStorage.setItem('max_tokens_limit', maxTokensVal); maxTokensLimit = maxTokensVal;
+        toggleSettings(); updateTokenEstimate();
+    }
+
+    function updateBackgroundImage() { const bgNum = selectedBackgroundImage; const newUrl = `${bgNum}.JPG`; if (document.body.classList.contains('theme-light')) { document.body.style.background = `linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6)), url('${newUrl}') center/cover fixed`; } else { document.body.style.background = `linear-gradient(145deg, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.6)), url('${newUrl}') center/cover fixed`; } }
+    const INPUT_EXPAND_THRESHOLD = 100;
+    function autoResize(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; const footer = document.getElementById('input-footer'); if (footer) { if (t.scrollHeight > INPUT_EXPAND_THRESHOLD) footer.classList.add('input-expanded'); else footer.classList.remove('input-expanded'); } updateTokenEstimate(); }
+    function resetInputState() { const input = document.getElementById('user-input'); const footer = document.getElementById('input-footer'); input.style.height = 'auto'; input.value = ''; if (footer) footer.classList.remove('input-expanded'); updateTokenEstimate(); }
+    function syncRetrySelect() { const mainSelect = document.getElementById('model-select'); const retrySelect = document.getElementById('retry-model-select'); retrySelect.innerHTML = mainSelect.innerHTML; }
+    function openRetryMenu(e) { e.stopPropagation(); const popover = document.getElementById('retry-popover'); popover.style.left = `${e.clientX - 10}px`; popover.style.top = `${e.clientY + 15}px`; popover.classList.remove('hidden'); }
+    function closeRetryMenu(e) { const popover = document.getElementById('retry-popover'); if (popover && !popover.contains(e.target)) popover.classList.add('hidden'); }
+    function confirmRetry() { const selectedModel = document.getElementById('retry-model-select').value; document.getElementById('retry-popover').classList.add('hidden'); const chat = chats.find(c => c.id === activeChatId); if (!chat || chat.messages.length === 0) return; if (chat.messages[chat.messages.length - 1].role === 'assistant') chat.messages.pop(); const lastUserMsg = chat.messages[chat.messages.length - 1]; if (!lastUserMsg || lastUserMsg.role !== 'user') return; renderMessages(chat.messages); const retryAttachments = lastUserMsg.attachments || []; requestAI(lastUserMsg.content, selectedModel, chat, retryAttachments); }
+    function stopGeneration() { if (abortController) { abortController.abort(); abortController = null; isGenerating = false; document.getElementById('send-btn').classList.remove('hidden'); document.getElementById('stop-btn').classList.add('hidden'); setCanvasEditable(true); } }
+
+    // ==================== Canvas 面板功能 ====================
+    function getCanvasCode(chat) {
+        if (!chat) return [''];
+        if (cmEditor) {
+            const value = cmEditor.getValue();
+            return value.split('\n');
+        }
+        return chat.canvasCode || [''];
+    }
+
+    function setCanvasCode(chat, codeLines) {
+        if (!chat) return;
+        if (!codeLines || !Array.isArray(codeLines)) codeLines = [''];
+        chat.canvasCode = codeLines;
+        chat.updatedAt = Date.now();
+        localStorage.setItem('ai_chats', JSON.stringify(chats));
+        if (cmEditor) {
+            cmEditor.setValue(codeLines.join('\n'));
+        }
+        updateCanvasStatus();
+    }
+
+    function updateCanvasStatus() {
+        const statusEl = document.getElementById('canvas-status');
+        if (statusEl && cmEditor) {
+            const lines = cmEditor.lineCount();
+            statusEl.textContent = `行数: ${lines} | 编码模式`;
+        }
+    }
+
+    function updateCanvasPanelUI(chat) {
+        if (!chat || !cmEditor) return;
+        const codeLines = chat.canvasCode || [''];
+        cmEditor.setValue(codeLines.join('\n'));
+        updateCanvasStatus();
+    }
+
+    function setCanvasEditable(editable) {
+        if (cmEditor) {
+            cmEditor.setOption('readOnly', !editable);
+        }
+    }
+
+    function copyCanvasCode() {
+        if (!cmEditor) return;
+        const code = cmEditor.getValue();
+        copyToClipboard(code, document.getElementById('canvas-copy-btn'));
+    }
+
+    function toggleCanvasPanel() {
+        const chat = activeChatId ? chats.find(c => c.id === activeChatId) : null;
+        if (!chat || !chat.canvasEnabled) return;
+        canvasPanelVisible = !canvasPanelVisible;
+        const panel = document.getElementById('canvas-panel');
+        const toggleBtn = document.getElementById('canvas-toggle-btn');
+        if (panel) panel.classList.toggle('visible', canvasPanelVisible);
+        if (toggleBtn) {
+            if (canvasPanelVisible) {
+                toggleBtn.innerHTML = '<i data-lucide="code-2" class="w-3.5 h-3.5"></i> 隐藏Canvas';
+                toggleBtn.style.background = 'rgba(16,185,129,0.3)';
+            } else {
+                toggleBtn.innerHTML = '<i data-lucide="code-2" class="w-3.5 h-3.5"></i> Canvas';
+                toggleBtn.style.background = 'rgba(16,185,129,0.2)';
+            }
+            lucide.createIcons();
+        }
+        if (canvasPanelVisible && cmEditor) {
+            cmEditor.refresh();
+            updateCanvasStatus();
+        }
+    }
+
+    function updateCanvasPanelForChat(chat) {
+        const panel = document.getElementById('canvas-panel');
+        const toggleBtn = document.getElementById('canvas-toggle-btn');
+        if (chat && chat.canvasEnabled) {
+            toggleBtn.classList.add('visible');
+            if (canvasPanelVisible) panel.classList.add('visible');
+            updateCanvasPanelUI(chat);
+            setCanvasEditable(!isGenerating);
+        } else {
+            toggleBtn.classList.remove('visible');
+            panel.classList.remove('visible');
+            canvasPanelVisible = false;
+            toggleBtn.innerHTML = '<i data-lucide="code-2" class="w-3.5 h-3.5"></i> Canvas';
+            toggleBtn.style.background = 'rgba(16,185,129,0.2)';
+            lucide.createIcons();
+        }
+    }
+
+    function buildCanvasContextString(chat) {
+        if (!chat || !chat.canvasEnabled) return '';
+        const codeLines = getCanvasCode(chat);
+        const numberedCode = codeLines.map((line, i) => `${i + 1} | ${line}`).join('\n');
+        return `\n\n【Canvas代码区域 - 当前状态】\n以下是当前Canvas中的代码（含行号，行号从1开始）：\n${numberedCode}\n\n【修改Canvas代码的规则 - 非常重要】\n当你需要修改Canvas中的代码时，请在回复中使用以下精确格式。修改区域不能重叠！\n格式示例：\n[replace]\nstart:2\nend:5\n\`\`\`\n替换的新代码（可以多行）\n\`\`\`\n说明：start是起始行号，end是结束行号（包含在内）。替换后，代码行数可能变化，后续行号会自动偏移。请在每次修改时基于当前显示的行号进行操作。\n另外，禁止在代码块中或外输出代码语言名，如html。`;
+    }
+
+    function parseAndApplyReplaceBlocks(fullContent, chat) {
+        if (!chat || !chat.canvasEnabled) return;
+        const replaceRegex = /\[replace\]\s*\nstart:(\d+)\s*\nend:(\d+)\s*\n```\n?([\s\S]*?)```/g;
+        const allMatches = [];
+        let match;
+        while ((match = replaceRegex.exec(fullContent)) !== null) {
+            allMatches.push({ start: parseInt(match[1]), end: parseInt(match[2]), code: match[3], matchIndex: match.index });
+        }
+        if (allMatches.length <= processedReplaceCount) return;
+        const newBlocks = allMatches.slice(processedReplaceCount);
+        processedReplaceCount = allMatches.length;
+        sessionReplaceBlocks.push(...newBlocks);
+
+        // 真实应用新增块（降序）
+        let codeLines = getCanvasCode(chat);
+        const sortedNew = [...newBlocks].sort((a, b) => b.start - a.start);
+        for (const block of sortedNew) {
+            const startIdx = block.start - 1;
+            const endIdx = block.end - 1;
+            if (startIdx < 0 || endIdx >= codeLines.length || startIdx > endIdx) continue;
+            const newLines = block.code.split('\n');
+            if (newLines.length > 0 && newLines[newLines.length - 1] === '' && block.code.endsWith('\n')) newLines.pop();
+            codeLines.splice(startIdx, endIdx - startIdx + 1, ...newLines);
+        }
+        chat.canvasCode = codeLines;
+        chat.updatedAt = Date.now();
+        localStorage.setItem('ai_chats', JSON.stringify(chats));
+
+        // 更新编辑器（避免重复触发change事件）
+        if (cmEditor) {
+            cmEditor.off('change', onCodeMirrorChange);
+            cmEditor.setValue(codeLines.join('\n'));
+            cmEditor.on('change', onCodeMirrorChange);
+            updateCanvasStatus();
         }
 
-        function createNewChat() {
-            const id = Date.now().toString();
-            const newChat = { id, title: '新对话', messages: [], updatedAt: Date.now() };
-            chats.unshift(newChat);
-            localStorage.setItem('ai_chats', JSON.stringify(chats));
-            renderChatHistory();
-            switchChat(id);
-            syncData();
-            toggleSidebar(false);
-            clearAttachments();
+        // 标记所有本次会话的替换块
+        let simLines = [...codeLines];
+        const sortedAll = [...sessionReplaceBlocks].sort((a, b) => b.start - a.start);
+        const ranges = [];
+        for (const block of sortedAll) {
+            const startIdx = block.start - 1;
+            const endIdx = block.end - 1;
+            if (startIdx < 0 || endIdx >= simLines.length || startIdx > endIdx) continue;
+            const newLines = block.code.split('\n');
+            if (newLines.length > 0 && newLines[newLines.length - 1] === '' && block.code.endsWith('\n')) newLines.pop();
+            simLines.splice(startIdx, endIdx - startIdx + 1, ...newLines);
+            ranges.push({ from: startIdx + 1, to: startIdx + newLines.length });
         }
-
-        function switchChat(id) {
-            activeChatId = id;
-            const chat = chats.find(c => c.id === id);
-            if (!chat) return;
-            document.getElementById('active-chat-title').innerText = chat.title;
-            renderMessages(chat.messages);
-            renderChatHistory();
-            clearAttachments();
-            updateTokenEstimate();
+        if (cmEditor) {
+            cmEditor.operation(() => {
+                cmEditor.eachLine((line) => {
+                    cmEditor.removeLineClass(line, 'background', 'canvas-modified-line');
+                });
+                ranges.forEach(range => {
+                    for (let i = range.from; i <= range.to; i++) {
+                        cmEditor.addLineClass(i - 1, 'background', 'canvas-modified-line');
+                    }
+                });
+            });
         }
+        setCanvasEditable(!isGenerating);
+    }
 
-        async function sendMessage() {
-            if (isGenerating) return;
-            const input = document.getElementById('user-input');
-            const text = input.value.trim();
-            if (!text && currentAttachments.length === 0) return;
-            const model = document.getElementById('model-select').value;
-            const chat = chats.find(c => c.id === activeChatId);
-            if (chat.messages.length === 0) {
-                chat.title = text.slice(0, 20) || '文件对话';
+    function replaceBlocksToSummary(content) {
+        const regex = /\[replace\]\s*\nstart:(\d+)\s*\nend:(\d+)\s*\n```\n?([\s\S]*?)```/g;
+        return content.replace(regex, (match, start, end, code) => {
+            const lineCount = code.split('\n').filter(l => l.length > 0 || code.endsWith('\n')).length;
+            return `<span class="canvas-replace-notice">修改了画布代码：canvas[replace]with[${lineCount}行]。</span>`;
+        });
+    }
+
+    function renderChatHistory() { filteredChats = chats; renderFilteredHistory(); }
+    function filterChats() { const searchTerm = document.getElementById('chat-search')?.value?.toLowerCase()?.trim() || ''; filteredChats = searchTerm ? chats.filter(chat => chat.title.toLowerCase().includes(searchTerm)) : chats; renderFilteredHistory(); }
+    function renderFilteredHistory() {
+        const container = document.getElementById('chat-history'); container.innerHTML = '';
+        (filteredChats.length ? filteredChats : chats).forEach(chat => {
+            const canvasBadge = chat.canvasEnabled ? ' <span style="font-size:0.55rem;color:#10b981;">[Canvas]</span>' : '';
+            const btn = document.createElement('button');
+            btn.className = `w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors text-sm ${activeChatId === chat.id ? 'active-chat' : ''}`;
+            btn.innerHTML = `<i data-lucide="message-square" class="w-4 h-4 text-gray-400 flex-shrink-0"></i><span class="truncate text-left flex-grow">${chat.title}${canvasBadge}</span><span class="delete-chat-btn p-1" data-chat-id="${chat.id}" onclick="event.stopPropagation(); deleteChat('${chat.id}')"><i data-lucide="trash-2" class="w-4 h-4 text-gray-400"></i></span>`;
+            btn.onclick = () => switchChat(chat.id);
+            container.appendChild(btn);
+        });
+        lucide.createIcons();
+    }
+
+    async function deleteChat(chatId) {
+        if (!confirm('确定删除此对话？')) return;
+        const chat = chats.find(c => c.id === chatId);
+        if (!chat) return;
+        if (chat.lcObjectId) {
+            try { const deleteUrl = `${LC_CONFIG.base}/${chat.lcObjectId}`; await fetch(deleteUrl, { method: 'DELETE', headers: { 'X-LC-Id': LC_CONFIG.id, 'X-LC-Key': `${LC_CONFIG.masterKey},master`, 'Content-Type': 'application/json' } }); } catch (e) { alert('云端删除失败，请稍后再试。'); return; }
+        }
+        const index = chats.findIndex(c => c.id === chatId);
+        if (index !== -1) chats.splice(index, 1);
+        localStorage.setItem('ai_chats', JSON.stringify(chats));
+        if (activeChatId === chatId) { if (chats.length > 0) switchChat(chats[0].id); else createNewChat(); }
+        filterChats();
+    }
+
+    function createNewChat() {
+        const id = Date.now().toString();
+        const newChat = { id, title: '新对话', messages: [], updatedAt: Date.now(), canvasEnabled: false, canvasCode: [''] };
+        chats.unshift(newChat);
+        localStorage.setItem('ai_chats', JSON.stringify(chats));
+        renderChatHistory();
+        switchChat(id);
+        syncData();
+        toggleSidebar(false);
+        clearAttachments();
+    }
+
+    function switchChat(id) {
+        activeChatId = id;
+        const chat = chats.find(c => c.id === id);
+        if (!chat) return;
+        if (chat.canvasEnabled === undefined) chat.canvasEnabled = false;
+        if (!chat.canvasCode || !Array.isArray(chat.canvasCode)) chat.canvasCode = [''];
+        document.getElementById('active-chat-title').innerText = chat.title;
+        renderMessages(chat.messages);
+        renderChatHistory();
+        clearAttachments();
+        updateTokenEstimate();
+        canvasPanelVisible = chat.canvasEnabled && canvasPanelVisible;
+        updateCanvasPanelForChat(chat);
+        processedReplaceCount = 0;
+        sessionReplaceBlocks = [];
+        if (cmEditor) {
+            cmEditor.setValue(chat.canvasCode.join('\n'));
+            cmEditor.eachLine((line) => {
+                cmEditor.removeLineClass(line, 'background', 'canvas-modified-line');
+            });
+            updateCanvasStatus();
+        }
+    }
+
+    async function sendMessage() {
+        if (isGenerating) return;
+        const input = document.getElementById('user-input');
+        const rawText = input.value;
+        const text = rawText.trim();
+        if (!text && currentAttachments.length === 0) return;
+        const model = document.getElementById('model-select').value;
+        const chat = chats.find(c => c.id === activeChatId);
+        let isCanvasCommand = false;
+        let actualMessage = text;
+        if (text.startsWith('/canvas')) {
+            isCanvasCommand = true;
+            actualMessage = text.slice(7).trim();
+            if (!actualMessage && currentAttachments.length === 0) {
+                chat.canvasEnabled = true;
+                chat.canvasCode = [''];
+                chat.updatedAt = Date.now();
+                localStorage.setItem('ai_chats', JSON.stringify(chats));
                 document.getElementById('active-chat-title').innerText = chat.title;
+                renderChatHistory();
+                canvasPanelVisible = true;
+                updateCanvasPanelForChat(chat);
+                processedReplaceCount = 0;
+                sessionReplaceBlocks = [];
+                resetInputState();
+                syncData();
+                return;
             }
-            const userMsg = { role: 'user', content: text };
-            const attachmentsToSend = [...currentAttachments];
-            if (attachmentsToSend.length > 0) {
-                userMsg.attachments = attachmentsToSend.map(att => ({
-                    name: att.name,
-                    type: att.type,
-                    data: att.data,
-                    fullDataUrl: att.fullDataUrl || null,
-                    size: att.size,
-                    originalSize: att.originalSize,
-                    isImage: att.isImage,
-                    isText: att.isText || false
-                }));
-            }
-            chat.messages.push(userMsg);
+            chat.canvasEnabled = true;
+            chat.canvasCode = [''];
             chat.updatedAt = Date.now();
-            appendMessageToUI('user', text, null, false, '', attachmentsToSend);
-            resetInputState();
-            clearAttachments();
-            syncData();
-            await requestAI(text, model, chat, attachmentsToSend);
+            canvasPanelVisible = true;
+            updateCanvasPanelForChat(chat);
+            processedReplaceCount = 0;
+            sessionReplaceBlocks = [];
         }
+        if (chat.messages.length === 0) {
+            chat.title = actualMessage.slice(0, 20) || (currentAttachments.length > 0 ? '文件对话' : 'Canvas编码');
+            document.getElementById('active-chat-title').innerText = chat.title;
+        }
+        const userMsg = { role: 'user', content: actualMessage };
+        const attachmentsToSend = [...currentAttachments];
+        if (attachmentsToSend.length > 0) {
+            userMsg.attachments = attachmentsToSend.map(att => ({ name: att.name, type: att.type, data: att.data, fullDataUrl: att.fullDataUrl || null, size: att.size, originalSize: att.originalSize, isImage: att.isImage, isText: att.isText || false }));
+        }
+        chat.messages.push(userMsg);
+        chat.updatedAt = Date.now();
+        appendMessageToUI('user', actualMessage, null, false, '', attachmentsToSend);
+        resetInputState();
+        clearAttachments();
+        updateCanvasPanelForChat(chat);
+        renderChatHistory();
+        localStorage.setItem('ai_chats', JSON.stringify(chats));
+        syncData();
+        await requestAI(actualMessage, model, chat, attachmentsToSend);
+    }
 
-        async function requestAI(userText, model, chat, sendAttachments = []) {
-            abortController = new AbortController();
-            isGenerating = true;
-            document.getElementById('send-btn').classList.add('hidden');
-            document.getElementById('stop-btn').classList.remove('hidden');
-            const aiRow = appendMessageToUI('assistant', '', model, true);
-            const thinkingDiv = aiRow.querySelector('.thinking-text');
-            const contentArea = aiRow.querySelector('.ai-content-area');
-            let fullContent = "",
-                thinkingContent = "";
-            let receivedAny = false;
-            const systemWithMem = await buildSystemMessageWithMemories();
-            try {
-                const chatMessagesCopy = chat.messages.slice();
-                if (sendAttachments.length > 0 && chatMessagesCopy.length > 0) {
-                    const lastMsg = chatMessagesCopy[chatMessagesCopy.length - 1];
-                    if (lastMsg.role === 'user') lastMsg._tempAttachments = sendAttachments;
-                }
-                const apiMessages = buildAPIMessagesWithTemp(chatMessagesCopy);
-                const response = await fetch(`${getBaseURL()}/chat/completions`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAPIKey()}` },
-                    body: JSON.stringify({
-                        model,
-                        temperature: currentTemp,
-                        messages: [{ role: 'system', content: systemWithMem }, ...apiMessages],
-                        stream: true
-                    }),
-                    signal: abortController.signal
-                });
-                if (!response.ok) throw new Error(`API error: ${response.status}`);
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const data = line.slice(6);
-                            if (data === '[DONE]') continue;
-                            try {
-                                const json = JSON.parse(data);
-                                const delta = json.choices[0].delta || {};
-                                if (delta.reasoning_content) {
-                                    thinkingContent += delta.reasoning_content;
-                                    if (thinkingDiv) {
-                                        thinkingDiv.style.display = 'block';
-                                        thinkingDiv.innerText = thinkingContent;
-                                    }
-                                }
-                                if (delta.content) {
-                                    receivedAny = true;
-                                    fullContent += delta.content;
-                                    contentArea.innerHTML = marked.parse(fullContent);
-                                    renderMathFormulas(contentArea);
-                                }
-                            } catch (e) { }
-                        }
+    async function requestAI(userText, model, chat, sendAttachments = []) {
+        abortController = new AbortController();
+        isGenerating = true;
+        document.getElementById('send-btn').classList.add('hidden');
+        document.getElementById('stop-btn').classList.remove('hidden');
+        setCanvasEditable(false);
+        const aiRow = appendMessageToUI('assistant', '', model, true);
+        const thinkingDiv = aiRow.querySelector('.thinking-text');
+        const contentArea = aiRow.querySelector('.ai-content-area');
+        let rawFullContent = "", thinkingContent = "";
+        let receivedAny = false;
+        processedReplaceCount = 0;
+        sessionReplaceBlocks = [];
+        const systemWithMem = await buildSystemMessageWithMemories();
+        try {
+            const chatMessagesCopy = chat.messages.slice();
+            if (sendAttachments.length > 0 && chatMessagesCopy.length > 0) {
+                const lastMsg = chatMessagesCopy[chatMessagesCopy.length - 1];
+                if (lastMsg.role === 'user') lastMsg._tempAttachments = sendAttachments;
+            }
+            const apiMessages = buildAPIMessagesWithTemp(chatMessagesCopy);
+            if (chat.canvasEnabled && apiMessages.length > 0) {
+                const canvasContext = buildCanvasContextString(chat);
+                if (canvasContext) {
+                    const lastApiMsg = apiMessages[apiMessages.length - 1];
+                    if (lastApiMsg.role === 'user') {
+                        if (typeof lastApiMsg.content === 'string') lastApiMsg.content += canvasContext;
+                        else if (Array.isArray(lastApiMsg.content)) { const textPart = lastApiMsg.content.find(c => c.type === 'text'); if (textPart) textPart.text += canvasContext; else lastApiMsg.content.push({ type: 'text', text: canvasContext }); }
                     }
                 }
-                if (!receivedAny && !fullContent.trim()) fullContent = '';
-                contentArea.querySelectorAll('pre code').forEach(el => {
-                    hljs.highlightElement(el);
-                    if (!el.parentElement.querySelector('.code-copy-btn')) {
-                        const copyBtn = document.createElement('button');
-                        copyBtn.className = 'code-copy-btn';
-                        copyBtn.innerText = '复制代码';
-                        copyBtn.onclick = (e) => {
-                            e.stopPropagation();
-                            copyToClipboard(el.innerText, copyBtn);
-                        };
-                        el.parentElement.appendChild(copyBtn);
+            }
+            const response = await fetch(`${getBaseURL()}/chat/completions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAPIKey()}` },
+                body: JSON.stringify({ model, temperature: currentTemp, messages: [{ role: 'system', content: systemWithMem }, ...apiMessages], stream: true, ...(maxTokensLimit > 0 ? { max_tokens: maxTokensLimit } : {}) }),
+                signal: abortController.signal
+            });
+            if (!response.ok) throw new Error(`API error: ${response.status}`);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6);
+                        if (data === '[DONE]') continue;
+                        try {
+                            const json = JSON.parse(data);
+                            const delta = json.choices[0].delta || {};
+                            if (delta.reasoning_content) { thinkingContent += delta.reasoning_content; if (thinkingDiv) { thinkingDiv.style.display = 'block'; thinkingDiv.innerText = thinkingContent; } }
+                            if (delta.content) {
+                                receivedAny = true;
+                                rawFullContent += delta.content;
+                                const displayContent = replaceBlocksToSummary(rawFullContent);
+                                contentArea.innerHTML = marked.parse(displayContent);
+                                renderMathFormulas(contentArea);
+                                if (chat.canvasEnabled) parseAndApplyReplaceBlocks(rawFullContent, chat);
+                            }
+                        } catch (e) {}
                     }
-                });
-                chat.messages.push({ role: 'assistant', content: fullContent, model, reasoning: thinkingContent });
+                }
+            }
+            if (!receivedAny && !rawFullContent.trim()) rawFullContent = '';
+            const displayContent = replaceBlocksToSummary(rawFullContent);
+            contentArea.innerHTML = marked.parse(displayContent);
+            renderMathFormulas(contentArea);
+            if (chat.canvasEnabled) parseAndApplyReplaceBlocks(rawFullContent, chat);
+            contentArea.querySelectorAll('pre code').forEach(el => { hljs.highlightElement(el); if (!el.parentElement.querySelector('.code-copy-btn') && !el.closest('.canvas-replace-notice')) { const copyBtn = document.createElement('button'); copyBtn.className = 'code-copy-btn'; copyBtn.innerText = '复制代码'; copyBtn.onclick = (e) => { e.stopPropagation(); copyToClipboard(el.innerText, copyBtn); }; el.parentElement.appendChild(copyBtn); } });
+            chat.messages.push({ role: 'assistant', content: displayContent, model, reasoning: thinkingContent });
+            chat.updatedAt = Date.now();
+            localStorage.setItem('ai_chats', JSON.stringify(chats));
+            renderChatHistory();
+            await syncData();
+        } catch (err) {
+            if (err.name !== 'AbortError') { contentArea.innerHTML = `<span class="text-red-500">Error: ${err.message}</span>`; } else {
+                if (!rawFullContent.trim() && !receivedAny) rawFullContent = '';
+                const displayContent = replaceBlocksToSummary(rawFullContent);
+                contentArea.innerHTML = marked.parse(displayContent || '');
+                renderMathFormulas(contentArea);
+                if (chat.canvasEnabled) parseAndApplyReplaceBlocks(rawFullContent, chat);
+                chat.messages.push({ role: 'assistant', content: displayContent, model, reasoning: thinkingContent });
                 chat.updatedAt = Date.now();
                 localStorage.setItem('ai_chats', JSON.stringify(chats));
                 renderChatHistory();
                 await syncData();
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    contentArea.innerHTML = `<span class="text-red-500">Error: ${err.message}</span>`;
-                } else {
-                    if (!fullContent.trim() && !receivedAny) fullContent = '';
-                    contentArea.innerHTML = marked.parse(fullContent || '');
-                    renderMathFormulas(contentArea);
-                    chat.messages.push({ role: 'assistant', content: fullContent, model, reasoning: thinkingContent });
-                    chat.updatedAt = Date.now();
-                    localStorage.setItem('ai_chats', JSON.stringify(chats));
-                    renderChatHistory();
-                    await syncData();
-                }
-            } finally {
-                abortController = null;
-                isGenerating = false;
-                document.getElementById('send-btn').classList.remove('hidden');
-                document.getElementById('stop-btn').classList.add('hidden');
-                lucide.createIcons();
-                document.getElementById('messages-wrapper').scrollTop = document.getElementById('messages-wrapper')
-                    .scrollHeight;
             }
-        }
-
-        window.onload = async () => {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            setTheme(savedTheme, false);
-            document.body.classList.add(`font-size-${currentFontSize}`);
+        } finally {
+            abortController = null;
+            isGenerating = false;
+            document.getElementById('send-btn').classList.remove('hidden');
+            document.getElementById('stop-btn').classList.add('hidden');
+            setCanvasEditable(true);
             lucide.createIcons();
-            document.getElementById('sys-prompt').value = systemPrompt;
-            document.getElementById('api-key-input').value = getAPIKey();
-            document.getElementById('base-url-input').value = getBaseURL();
-            document.getElementById('max-tokens-input').value = maxTokensLimit;
-            // 初始化图片精细度select
-            const savedDetail = localStorage.getItem('image_detail_level') || 'medium';
-            const detailSelect = document.getElementById('image-detail-select');
-            if (detailSelect) detailSelect.value = savedDetail;
-            updateTempUI();
-            updateBackgroundImage();
-            highlightBackgroundThumb();
-            syncRetrySelect();
-            renderChatHistory();
-            await syncData();
-            await fetchMemoriesFromCloud();
-            chats.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-            const latestChat = chats.length ? chats[0] : null;
-            if (!latestChat || (latestChat.messages && latestChat.messages.length > 0)) createNewChat();
-            else switchChat(latestChat.id);
-            const input = document.getElementById('user-input');
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-            input.addEventListener('paste', handlePaste);
-            highlightFontBtn(currentFontSize);
-            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
-            updateTokenEstimate();
-            // 初始隐藏精细度选择器
-            updateImageDetailVisibility();
-        };
-
-        function updateTempUI() {
-            document.querySelectorAll('.temp-btn').forEach(btn => {
-                btn.classList.toggle('active', parseFloat(btn.dataset.temp) === currentTemp);
-            });
+            document.getElementById('messages-wrapper').scrollTop = document.getElementById('messages-wrapper').scrollHeight;
         }
+    }
 
-        function highlightFontBtn(size) {
-            document.querySelectorAll('.font-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.size === size);
-            });
+    function onCodeMirrorChange() {
+        const chat = activeChatId ? chats.find(c => c.id === activeChatId) : null;
+        if (chat && chat.canvasEnabled && cmEditor) {
+            chat.canvasCode = cmEditor.getValue().split('\n');
+            chat.updatedAt = Date.now();
+            localStorage.setItem('ai_chats', JSON.stringify(chats));
+            updateCanvasStatus();
         }
+    }
 
-        function highlightBackgroundThumb() {
-            const selectedThumb = document.getElementById(`bg-thumb-${selectedBackgroundImage}`);
-            if (selectedThumb) {
-                document.querySelectorAll('[id^="bg-thumb-"]').forEach(img => { img.style.borderColor = '#3d3d3d'; });
-                selectedThumb.style.borderColor = '#10b981';
-            }
-        }
-    </script>
+    window.onload = async () => {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        setTheme(savedTheme, false);
+        document.body.classList.add(`font-size-${currentFontSize}`);
+        lucide.createIcons();
+        document.getElementById('sys-prompt').value = systemPrompt;
+        document.getElementById('api-key-input').value = getAPIKey();
+        document.getElementById('base-url-input').value = getBaseURL();
+        document.getElementById('max-tokens-input').value = maxTokensLimit;
+        const savedDetail = localStorage.getItem('image_detail_level') || 'medium';
+        const detailSelect = document.getElementById('image-detail-select');
+        if (detailSelect) detailSelect.value = savedDetail;
+        updateTempUI();
+        updateBackgroundImage();
+        highlightBackgroundThumb();
+        syncRetrySelect();
+        renderChatHistory();
+        await syncData();
+        await fetchMemoriesFromCloud();
+        chats.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        const latestChat = chats.length ? chats[0] : null;
+        if (!latestChat || (latestChat.messages && latestChat.messages.length > 0)) createNewChat();
+        else switchChat(latestChat.id);
+        const input = document.getElementById('user-input');
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendMessage(); } });
+        input.addEventListener('paste', handlePaste);
+        highlightFontBtn(currentFontSize);
+        highlightCanvasSizeBtn(currentCanvasFontSize);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+        updateTokenEstimate();
+        updateImageDetailVisibility();
+
+        const cmContainer = document.getElementById('canvas-codemirror');
+        cmEditor = CodeMirror(cmContainer, {
+            value: '',
+            mode: 'javascript',
+            theme: savedTheme === 'light' ? 'default' : 'material-darker',
+            lineNumbers: true,
+            readOnly: false,
+            tabSize: 2,
+            indentUnit: 2,
+            viewportMargin: Infinity
+        });
+        cmEditor.on('change', onCodeMirrorChange);
+
+        const sizeMap = { small: '12px', medium: '14px', large: '16px' };
+        cmEditor.getWrapperElement().style.fontSize = sizeMap[currentCanvasFontSize] || '14px';
+
+        const currentChat = activeChatId ? chats.find(c => c.id === activeChatId) : null;
+        if (currentChat && currentChat.canvasEnabled) canvasPanelVisible = true;
+        else canvasPanelVisible = false;
+        updateCanvasPanelForChat(currentChat);
+    };
+
+    function updateTempUI() { document.querySelectorAll('.temp-btn').forEach(btn => { btn.classList.toggle('active', parseFloat(btn.dataset.temp) === currentTemp); }); }
+    function highlightFontBtn(size) { document.querySelectorAll('.font-btn').forEach(btn => { btn.classList.toggle('active', btn.dataset.size === size); }); }
+    function highlightCanvasSizeBtn(size) { document.querySelectorAll('.code-size-btn').forEach(btn => { btn.classList.toggle('active', btn.dataset.size === size); }); }
+    function highlightBackgroundThumb() { const selectedThumb = document.getElementById(`bg-thumb-${selectedBackgroundImage}`); if (selectedThumb) { document.querySelectorAll('[id^="bg-thumb-"]').forEach(img => { img.style.borderColor = '#3d3d3d'; }); selectedThumb.style.borderColor = '#10b981'; } }
+</script>
 </body>
 </html>
