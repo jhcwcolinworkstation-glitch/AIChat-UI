@@ -1,0 +1,64 @@
+{
+  "name": "AIChatUI",
+  "version": "1.0.0",
+  "description": "AI Chat UI powered by Electron",
+  "main": "main.js",
+  "author": "JHCWColin",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "devDependencies": {
+    "electron": "^XX.X.X",
+    "electron-builder": "^XX.X.X"
+  },
+  "build": {
+    "appId": "com.jhcwcolin.aiui",
+    "productName": "AIChatUI",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/**/*",
+      "!release/**"
+    ],
+    "icon": "icon.png",
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "nsis",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "msi",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": [
+        "deb",
+        "AppImage"
+      ],
+      "arch": ["x64"],
+      "category": "Utility"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.utilities"
+    }
+  }
+}
