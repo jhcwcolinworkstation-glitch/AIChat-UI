@@ -10,8 +10,8 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "devDependencies": {
-    "electron": "^XX.X.X",
-    "electron-builder": "^XX.X.X"
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1"
   },
   "build": {
     "appId": "com.jhcwcolin.aiui",
