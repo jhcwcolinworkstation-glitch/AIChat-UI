@@ -1,9 +1,9 @@
 {
   "name": "AIChatUI",
-  "version": "1.0.0",
+  "version": "4.0.3",
   "description": "AI Chat UI powered by Electron",
   "main": "main.js",
-  "author": "JHCWColin",
+  "author": "JHCWColin <jhcwcolin@gmail.com>",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
@@ -27,18 +27,9 @@
     "icon": "icon.png",
     "win": {
       "target": [
-        {
-          "target": "portable",
-          "arch": ["x64", "arm64"]
-        },
-        {
-          "target": "nsis",
-          "arch": ["x64", "arm64"]
-        },
-        {
-          "target": "msi",
-          "arch": ["x64", "arm64"]
-        }
+        { "target": "portable", "arch": ["x64", "arm64"] },
+        { "target": "nsis", "arch": ["x64", "arm64"] },
+        { "target": "msi", "arch": ["x64", "arm64"] }
       ]
     },
     "nsis": {
