@@ -138,7 +138,7 @@ jobs:
           echo "alias=$ALIAS" >> $GITHUB_OUTPUT
           echo "Using alias: $ALIAS"
 
-      # ✅ 关键修正：将 keystore 复制到 android/app/ 目录（Gradle 期望的位置）
+      # 将 keystore 复制到 android/app/ 目录，并用绝对路径签名
       - name: Copy keystore into android project
         run: |
           cp ./1.keystore android/app/1.keystore
@@ -148,10 +148,11 @@ jobs:
           STORE_PASS: 20090807
           KEY_ALIAS: ${{ steps.alias.outputs.alias }}
           KEY_PASS: 20090807
+          KEYSTORE_FILE: ${{ github.workspace }}/android/app/1.keystore
         run: |
           cd android
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=1.keystore \
+            -Pandroid.injected.signing.store.file="$KEYSTORE_FILE" \
             -Pandroid.injected.signing.store.password="$STORE_PASS" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASS"
