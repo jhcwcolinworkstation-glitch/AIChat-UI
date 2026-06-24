@@ -52,7 +52,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ==================== Android APK 构建（已修正 Kotlin 冲突） ====================
+  # ==================== Android APK 构建（已修正签名路径） ====================
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
@@ -90,11 +90,9 @@ jobs:
           fi
           npx cap sync android
 
-      # ✅ 修复 Kotlin 标准库版本冲突
+      # 修复 Kotlin 标准库版本冲突
       - name: Fix Kotlin dependency conflict
         run: |
-          # 在 android/build.gradle 的 allprojects 块中强制统一 Kotlin 版本
-          # 找到 "allprojects {" 并在其后的 repositories 块结束后添加 resolutionStrategy
           sed -i '/^allprojects {/,/^}/{
             /^}/i\
             \    configurations.all {\
@@ -141,16 +139,20 @@ jobs:
           echo "alias=$ALIAS" >> $GITHUB_OUTPUT
           echo "Using alias: $ALIAS"
 
+      # 将 keystore 复制到 android 目录，避免路径解析问题
+      - name: Copy keystore into android project
+        run: |
+          cp ./1.keystore android/1.keystore
+
       - name: Build Release APK (signed)
         env:
-          KEYSTORE_FILE: ${{ steps.keystore.outputs.keystore-file }}
           STORE_PASS: 20090807
           KEY_ALIAS: ${{ steps.alias.outputs.alias }}
           KEY_PASS: 20090807
         run: |
           cd android
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=../$KEYSTORE_FILE \
+            -Pandroid.injected.signing.store.file=1.keystore \
             -Pandroid.injected.signing.store.password="$STORE_PASS" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASS"
