@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'V*'          # 仅当推送 V 开头的标签时触发
+      - 'V*'
 
 jobs:
   # ==================== Electron 桌面端构建 ====================
@@ -32,10 +32,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build Electron app
+      - name: Build Electron app (skip MSI on Windows to avoid WiX error)
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --publish never
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            # 只构建 portable 和 nsis，跳过 msi 避免 light.exe 冲突
+            npx electron-builder --win portable nsis --publish never
+          else
+            npx electron-builder --publish never
+          fi
 
       - name: Upload artifacts to Release
         uses: softprops/action-gh-release@v2
@@ -97,11 +104,16 @@ jobs:
           fi
           npx cap sync android
 
-      - name: Replace app icon
+      - name: Replace app icon (remove adaptive icons completely)
         run: |
+          # 彻底删除自适应图标目录，避免资源找不到
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26  # 重复确保删除
+          # 删除可能残留的单个文件
           find android/app/src/main/res -name "ic_launcher.xml" -delete
           find android/app/src/main/res -name "ic_launcher_foreground.png" -delete
           find android/app/src/main/res -name "ic_launcher_background.xml" -delete
+          # 复制你的图标到所有密度
           for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
             cp icon.png android/app/src/main/res/mipmap-${density}/ic_launcher.png
           done
@@ -174,14 +186,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASS"
 
-      # ✅ 重命名 APK，格式与桌面产物统一
       - name: Rename APK
         run: |
           cd android/app/build/outputs/apk/release
           APK_FILE=$(ls *.apk | head -n1)
           NEW_NAME="AIChatUI-${APP_VERSION}-android.apk"
           mv "$APK_FILE" "$NEW_NAME"
-          echo "Renamed to $NEW_NAME"
 
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
