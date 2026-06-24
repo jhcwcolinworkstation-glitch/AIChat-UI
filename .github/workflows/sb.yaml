@@ -38,7 +38,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            # 只构建 portable 和 nsis，跳过 msi 避免 light.exe 冲突
             npx electron-builder --win portable nsis --publish never
           else
             npx electron-builder --publish never
@@ -205,5 +204,144 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: android/app/build/outputs/apk/release/AIChatUI-*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ==================== iOS Simulator 构建（无证书，统一图标与命名） ====================
+  build-ios-simulator:
+    name: Build iOS Simulator app
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set version from tag
+        shell: bash
+        run: |
+          TAG_VERSION=$(echo "${{ github.ref_name }}" | sed 's/^V//')
+          echo "APP_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+          echo "Version set to $TAG_VERSION"
+
+      - name: Setup Capacitor (web-to-mobile) for iOS
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/ios --save-dev
+
+      - name: Prepare web assets for mobile
+        run: |
+          mkdir -p www
+          rsync -av \
+            --exclude='www' \
+            --exclude='android' \
+            --exclude='ios' \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='release' \
+            ./ www/
+
+      - name: Initialize Capacitor project (iOS)
+        run: |
+          if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ]; then
+            npx cap init "AIChatUI" "com.jhcwcolin.aiui" --web-dir=www
+          fi
+          if [ ! -d ios ]; then
+            npx cap add ios
+          fi
+          npx cap sync ios
+
+      # 安装 ImageMagick 并生成多尺寸 iOS 图标，替换默认资源
+      - name: Generate iOS icons from icon.png
+        run: |
+          brew install imagemagick
+
+          # 目标 assets 目录
+          ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+
+          # 删除原有默认图标文件
+          rm -f $ICON_DIR/*.png
+
+          # iOS 模拟器常用图标尺寸（单倍、2x、3x）以及 App Store 尺寸（用于占位）
+          # 这里生成所有必需的尺寸，即使模拟器构建主要用到 60x60 等
+          # 尺寸列表根据 iOS 标准
+          convert icon.png -resize 20x20   $ICON_DIR/Icon-App-20x20@1x.png
+          convert icon.png -resize 40x40   $ICON_DIR/Icon-App-20x20@2x.png
+          convert icon.png -resize 60x60   $ICON_DIR/Icon-App-20x20@3x.png
+          convert icon.png -resize 29x29   $ICON_DIR/Icon-App-29x29@1x.png
+          convert icon.png -resize 58x58   $ICON_DIR/Icon-App-29x29@2x.png
+          convert icon.png -resize 87x87   $ICON_DIR/Icon-App-29x29@3x.png
+          convert icon.png -resize 40x40   $ICON_DIR/Icon-App-40x40@1x.png
+          convert icon.png -resize 80x80   $ICON_DIR/Icon-App-40x40@2x.png
+          convert icon.png -resize 120x120 $ICON_DIR/Icon-App-40x40@3x.png
+          convert icon.png -resize 120x120 $ICON_DIR/Icon-App-60x60@2x.png
+          convert icon.png -resize 180x180 $ICON_DIR/Icon-App-60x60@3x.png
+          convert icon.png -resize 76x76   $ICON_DIR/Icon-App-76x76@1x.png
+          convert icon.png -resize 152x152 $ICON_DIR/Icon-App-76x76@2x.png
+          convert icon.png -resize 167x167 $ICON_DIR/Icon-App-83.5x83.5@2x.png
+          convert icon.png -resize 1024x1024 $ICON_DIR/Icon-App-1024x1024@1x.png
+
+          # 更新 Contents.json 以匹配新图标（使用通用 JSON）
+          cat > $ICON_DIR/Contents.json << 'EOF'
+          {
+            "images" : [
+              {"idiom" : "iphone","scale" : "1x","size" : "20x20","filename" : "Icon-App-20x20@1x.png"},
+              {"idiom" : "iphone","scale" : "2x","size" : "20x20","filename" : "Icon-App-20x20@2x.png"},
+              {"idiom" : "iphone","scale" : "3x","size" : "20x20","filename" : "Icon-App-20x20@3x.png"},
+              {"idiom" : "iphone","scale" : "1x","size" : "29x29","filename" : "Icon-App-29x29@1x.png"},
+              {"idiom" : "iphone","scale" : "2x","size" : "29x29","filename" : "Icon-App-29x29@2x.png"},
+              {"idiom" : "iphone","scale" : "3x","size" : "29x29","filename" : "Icon-App-29x29@3x.png"},
+              {"idiom" : "iphone","scale" : "1x","size" : "40x40","filename" : "Icon-App-40x40@1x.png"},
+              {"idiom" : "iphone","scale" : "2x","size" : "40x40","filename" : "Icon-App-40x40@2x.png"},
+              {"idiom" : "iphone","scale" : "3x","size" : "40x40","filename" : "Icon-App-40x40@3x.png"},
+              {"idiom" : "iphone","scale" : "2x","size" : "60x60","filename" : "Icon-App-60x60@2x.png"},
+              {"idiom" : "iphone","scale" : "3x","size" : "60x60","filename" : "Icon-App-60x60@3x.png"},
+              {"idiom" : "ipad","scale" : "1x","size" : "20x20","filename" : "Icon-App-20x20@1x.png"},
+              {"idiom" : "ipad","scale" : "2x","size" : "20x20","filename" : "Icon-App-20x20@2x.png"},
+              {"idiom" : "ipad","scale" : "1x","size" : "29x29","filename" : "Icon-App-29x29@1x.png"},
+              {"idiom" : "ipad","scale" : "2x","size" : "29x29","filename" : "Icon-App-29x29@2x.png"},
+              {"idiom" : "ipad","scale" : "1x","size" : "40x40","filename" : "Icon-App-40x40@1x.png"},
+              {"idiom" : "ipad","scale" : "2x","size" : "40x40","filename" : "Icon-App-40x40@2x.png"},
+              {"idiom" : "ipad","scale" : "1x","size" : "76x76","filename" : "Icon-App-76x76@1x.png"},
+              {"idiom" : "ipad","scale" : "2x","size" : "76x76","filename" : "Icon-App-76x76@2x.png"},
+              {"idiom" : "ipad","scale" : "2x","size" : "83.5x83.5","filename" : "Icon-App-83.5x83.5@2x.png"},
+              {"idiom" : "ios-marketing","scale" : "1x","size" : "1024x1024","filename" : "Icon-App-1024x1024@1x.png"}
+            ],
+            "info" : {
+              "version" : 1,
+              "author" : "xcode"
+            }
+          }
+          EOF
+
+          echo "iOS icons generated."
+
+      - name: Install CocoaPods (if needed)
+        run: |
+          if ! command -v pod &> /dev/null; then
+            sudo gem install cocoapods
+          fi
+          cd ios/App && pod install --repo-update
+
+      - name: Build iOS Simulator .app
+        run: |
+          xcodebuild -workspace ios/App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath ./ios-build \
+            build
+
+      - name: Package Simulator .app into zip
+        run: |
+          cd ios-build/Build/Products/Debug-iphonesimulator
+          ZIPNAME="AIChatUI-${APP_VERSION}-ios-simulator.zip"
+          zip -r "$GITHUB_WORKSPACE/$ZIPNAME" App.app
+
+      - name: Upload iOS Simulator zip to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: AIChatUI-*-ios-simulator.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
