@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'V*'          # 推送 V 开头的标签时触发
+      - 'V*'          # 仅当推送 V 开头的标签时触发
 
 jobs:
   # ==================== Electron 桌面端构建 ====================
@@ -52,7 +52,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ==================== Android APK 构建 ====================
+  # ==================== Android APK 构建（修正） ====================
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
@@ -66,12 +66,10 @@ jobs:
 
       - name: Setup Capacitor (web-to-mobile)
         run: |
-          # 安装 Capacitor 核心与 CLI，以及 Android 平台支持
           npm install @capacitor/core @capacitor/cli @capacitor/android --save-dev
 
       - name: Prepare web assets for mobile
         run: |
-          # 将所有前端资源复制到 www 目录（排除原生工程、依赖等）
           mkdir -p www
           rsync -av \
             --exclude='www' \
@@ -84,7 +82,6 @@ jobs:
 
       - name: Initialize Capacitor project
         run: |
-          # 若没有 Capacitor 配置则自动创建，并添加 Android 原生壳
           if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ]; then
             npx cap init "AIChatUI" "com.jhcwcolin.aiui" --web-dir=www
           fi
@@ -102,7 +99,6 @@ jobs:
       - name: Locate keystore file (root with prefix '1')
         id: keystore
         run: |
-          # 查找根目录下以 '1' 开头的文件（例如 1.keystore）
           KEYSTORE=$(find . -maxdepth 1 -type f -name '1*' | head -n 1)
           if [ -z "$KEYSTORE" ]; then
             echo "Error: keystore file not found (expected file starting with '1')"
@@ -114,10 +110,15 @@ jobs:
       - name: Extract key alias from keystore
         id: alias
         run: |
-          # 使用 keytool 从 keystore 中获取第一个别名（密码为 20090807）
-          ALIAS=$(keytool -list -keystore ${{ steps.keystore.outputs.keystore-file }} \
+          # 从 keystore 中提取别名（适配常见输出格式）
+          ALIAS=$(keytool -list -keystore ./1.keystore \
                   -storepass 20090807 2>/dev/null | \
-                  grep -A1 "Alias" | tail -n1 | awk '{print $1}')
+                  grep -E 'PrivateKeyEntry|keyEntry' | head -n 1 | awk -F, '{print $1}')
+          if [ -z "$ALIAS" ]; then
+            ALIAS=$(keytool -list -v -keystore ./1.keystore \
+                    -storepass 20090807 2>/dev/null | \
+                    grep "Alias name:" | head -n 1 | sed 's/Alias name: //')
+          fi
           if [ -z "$ALIAS" ]; then
             echo "Error: Could not determine key alias"
             exit 1
@@ -130,7 +131,7 @@ jobs:
           KEYSTORE_FILE: ${{ steps.keystore.outputs.keystore-file }}
           STORE_PASS: 20090807
           KEY_ALIAS: ${{ steps.alias.outputs.alias }}
-          KEY_PASS: 20090807   # 若密钥密码不同，请改为实际值
+          KEY_PASS: 20090807
         run: |
           cd android
           ./gradlew assembleRelease \
