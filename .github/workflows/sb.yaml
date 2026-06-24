@@ -64,6 +64,13 @@ jobs:
         with:
           node-version: 20
 
+      - name: Set version from tag
+        shell: bash
+        run: |
+          TAG_VERSION=$(echo "${{ github.ref_name }}" | sed 's/^V//')
+          echo "APP_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+          echo "Version set to $TAG_VERSION"
+
       - name: Setup Capacitor (web-to-mobile)
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/android --save-dev
@@ -90,6 +97,20 @@ jobs:
           fi
           npx cap sync android
 
+      - name: Replace app icon
+        run: |
+          find android/app/src/main/res -name "ic_launcher.xml" -delete
+          find android/app/src/main/res -name "ic_launcher_foreground.png" -delete
+          find android/app/src/main/res -name "ic_launcher_background.xml" -delete
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            cp icon.png android/app/src/main/res/mipmap-${density}/ic_launcher.png
+          done
+
+      - name: Set APK version
+        run: |
+          sed -i "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
+          sed -i "s/versionCode [0-9]*/versionCode $(date +%s)/" android/app/build.gradle
+
       - name: Fix Kotlin dependency conflict
         run: |
           sed -i '/^allprojects {/,/^}/{
@@ -109,18 +130,17 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Locate keystore file (root with prefix '1')
+      - name: Locate keystore file
         id: keystore
         run: |
           KEYSTORE=$(find . -maxdepth 1 -type f -name '1*' | head -n 1)
           if [ -z "$KEYSTORE" ]; then
-            echo "Error: keystore file not found (expected file starting with '1')"
+            echo "Error: keystore file not found"
             exit 1
           fi
           echo "keystore-file=$KEYSTORE" >> $GITHUB_OUTPUT
-          echo "Found keystore: $KEYSTORE"
 
-      - name: Extract key alias from keystore
+      - name: Extract key alias
         id: alias
         run: |
           ALIAS=$(keytool -list -keystore ./1.keystore \
@@ -136,12 +156,9 @@ jobs:
             exit 1
           fi
           echo "alias=$ALIAS" >> $GITHUB_OUTPUT
-          echo "Using alias: $ALIAS"
 
-      # 将 keystore 复制到 android/app/ 目录，并用绝对路径签名
-      - name: Copy keystore into android project
-        run: |
-          cp ./1.keystore android/app/1.keystore
+      - name: Copy keystore
+        run: cp ./1.keystore android/app/1.keystore
 
       - name: Build Release APK (signed)
         env:
@@ -157,9 +174,18 @@ jobs:
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASS"
 
+      # ✅ 重命名 APK，格式与桌面产物统一
+      - name: Rename APK
+        run: |
+          cd android/app/build/outputs/apk/release
+          APK_FILE=$(ls *.apk | head -n1)
+          NEW_NAME="AIChatUI-${APP_VERSION}-android.apk"
+          mv "$APK_FILE" "$NEW_NAME"
+          echo "Renamed to $NEW_NAME"
+
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: android/app/build/outputs/apk/release/*.apk
+          files: android/app/build/outputs/apk/release/AIChatUI-*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
