@@ -52,7 +52,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ==================== Android APK 构建（已修正签名路径） ====================
+  # ==================== Android APK 构建 ====================
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
@@ -90,7 +90,6 @@ jobs:
           fi
           npx cap sync android
 
-      # 修复 Kotlin 标准库版本冲突
       - name: Fix Kotlin dependency conflict
         run: |
           sed -i '/^allprojects {/,/^}/{
@@ -139,10 +138,10 @@ jobs:
           echo "alias=$ALIAS" >> $GITHUB_OUTPUT
           echo "Using alias: $ALIAS"
 
-      # 将 keystore 复制到 android 目录，避免路径解析问题
+      # ✅ 关键修正：将 keystore 复制到 android/app/ 目录（Gradle 期望的位置）
       - name: Copy keystore into android project
         run: |
-          cp ./1.keystore android/1.keystore
+          cp ./1.keystore android/app/1.keystore
 
       - name: Build Release APK (signed)
         env:
