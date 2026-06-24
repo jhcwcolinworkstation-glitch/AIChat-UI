@@ -3,11 +3,12 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'V*'          # 仅当推送 v 开头的标签时触发
+      - 'V*'          # 推送 V 开头的标签时触发
 
 jobs:
+  # ==================== Electron 桌面端构建 ====================
   build:
-    name: Build on ${{ matrix.os }}
+    name: Build Electron on ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -20,12 +21,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20    # 可根据需要调整
+          node-version: 20
 
       - name: Sync version with tag (remove 'V' prefix)
         shell: bash
         run: |
-          # 从标签名提取纯版本号（去掉 v），更新 package.json
           TAG_VERSION=$(echo "${{ github.ref_name }}" | sed 's/^V//')
           npm version --no-git-tag-version "$TAG_VERSION"
 
@@ -49,5 +49,99 @@ jobs:
             release/*.AppImage
             release/*.blockmap
             release/latest*.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ==================== Android APK 构建 ====================
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Capacitor (web-to-mobile)
+        run: |
+          # 安装 Capacitor 核心与 CLI，以及 Android 平台支持
+          npm install @capacitor/core @capacitor/cli @capacitor/android --save-dev
+
+      - name: Prepare web assets for mobile
+        run: |
+          # 将所有前端资源复制到 www 目录（排除原生工程、依赖等）
+          mkdir -p www
+          rsync -av \
+            --exclude='www' \
+            --exclude='android' \
+            --exclude='ios' \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='release' \
+            ./ www/
+
+      - name: Initialize Capacitor project
+        run: |
+          # 若没有 Capacitor 配置则自动创建，并添加 Android 原生壳
+          if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ]; then
+            npx cap init "AIChatUI" "com.jhcwcolin.aiui" --web-dir=www
+          fi
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+          npx cap sync android
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Locate keystore file (root with prefix '1')
+        id: keystore
+        run: |
+          # 查找根目录下以 '1' 开头的文件（例如 1.keystore）
+          KEYSTORE=$(find . -maxdepth 1 -type f -name '1*' | head -n 1)
+          if [ -z "$KEYSTORE" ]; then
+            echo "Error: keystore file not found (expected file starting with '1')"
+            exit 1
+          fi
+          echo "keystore-file=$KEYSTORE" >> $GITHUB_OUTPUT
+          echo "Found keystore: $KEYSTORE"
+
+      - name: Extract key alias from keystore
+        id: alias
+        run: |
+          # 使用 keytool 从 keystore 中获取第一个别名（密码为 20090807）
+          ALIAS=$(keytool -list -keystore ${{ steps.keystore.outputs.keystore-file }} \
+                  -storepass 20090807 2>/dev/null | \
+                  grep -A1 "Alias" | tail -n1 | awk '{print $1}')
+          if [ -z "$ALIAS" ]; then
+            echo "Error: Could not determine key alias"
+            exit 1
+          fi
+          echo "alias=$ALIAS" >> $GITHUB_OUTPUT
+          echo "Using alias: $ALIAS"
+
+      - name: Build Release APK (signed)
+        env:
+          KEYSTORE_FILE: ${{ steps.keystore.outputs.keystore-file }}
+          STORE_PASS: 20090807
+          KEY_ALIAS: ${{ steps.alias.outputs.alias }}
+          KEY_PASS: 20090807   # 若密钥密码不同，请改为实际值
+        run: |
+          cd android
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=../$KEYSTORE_FILE \
+            -Pandroid.injected.signing.store.password="$STORE_PASS" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASS"
+
+      - name: Upload APK to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/release/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
