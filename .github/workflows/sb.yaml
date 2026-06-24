@@ -52,7 +52,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ==================== Android APK 构建（修正） ====================
+  # ==================== Android APK 构建（已修正 JDK 版本） ====================
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
@@ -90,11 +90,12 @@ jobs:
           fi
           npx cap sync android
 
-      - name: Set up JDK 17
+      # ✅ 修改为 Java 21（Capacitor 最新版需要）
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Locate keystore file (root with prefix '1')
         id: keystore
@@ -110,7 +111,6 @@ jobs:
       - name: Extract key alias from keystore
         id: alias
         run: |
-          # 从 keystore 中提取别名（适配常见输出格式）
           ALIAS=$(keytool -list -keystore ./1.keystore \
                   -storepass 20090807 2>/dev/null | \
                   grep -E 'PrivateKeyEntry|keyEntry' | head -n 1 | awk -F, '{print $1}')
