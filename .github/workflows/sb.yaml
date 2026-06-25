@@ -207,7 +207,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ==================== iOS Simulator 构建（已修复部署目标） ====================
+  # ==================== iOS Simulator 构建（已修复工作空间路径） ====================
   build-ios-simulator:
     name: Build iOS Simulator app
     runs-on: macos-latest
@@ -254,19 +254,16 @@ jobs:
 
       - name: Fix iOS deployment target and install pods
         run: |
-          # 强制修改 Podfile 中的平台版本为 15.0（满足 Capacitor 最低要求）
+          # 确保 Podfile 存在并将平台版本设为 15.0
           if [ -f ios/App/Podfile ]; then
-            # 使用 sed 直接替换 platform 行
             sed -i '' "s/platform :ios, '[0-9.]*'/platform :ios, '15.0'/" ios/App/Podfile
           else
-            # 极小概率 Podfile 不存在，手动生成并指定平台
             cd ios/App && pod init
             sed -i '' "s/# platform :ios, '[0-9.]*'/platform :ios, '15.0'/" Podfile
           fi
-          # 安装 CocoaPods 依赖
+          # 安装 CocoaPods（在 ios/App 目录内执行，确保生成 App.xcworkspace）
           cd ios/App && pod install --repo-update
 
-      # 使用 ImageMagick 生成多尺寸 iOS 图标并替换默认资源
       - name: Generate iOS icons from icon.png
         run: |
           brew install imagemagick
@@ -324,7 +321,8 @@ jobs:
 
       - name: Build iOS Simulator .app
         run: |
-          xcodebuild -workspace ios/App.xcworkspace \
+          # ✅ 正确的 workspace 路径：ios/App/App.xcworkspace
+          xcodebuild -workspace ios/App/App.xcworkspace \
             -scheme App \
             -configuration Debug \
             -sdk iphonesimulator \
