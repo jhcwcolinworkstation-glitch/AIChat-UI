@@ -207,7 +207,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ==================== iOS Simulator 构建（已修复图标替换） ====================
+  # ==================== iOS Simulator 构建（使用 sips 生成图标，解决透明问题） ====================
   build-ios-simulator:
     name: Build iOS Simulator app
     runs-on: macos-latest
@@ -268,35 +268,31 @@ jobs:
 
           cd ios/App && pod install --repo-update
 
-      # ✅ 彻底重建图标集，确保用上自定义图标
+      # ✅ 使用 sips 生成 iOS 图标（避免 ImageMagick 导致的透明问题）
       - name: Generate iOS icons from icon.png
         run: |
-          brew install imagemagick
-
           ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
-          
-          # 删除整个旧图标集并重建目录
           rm -rf "$ICON_DIR"
           mkdir -p "$ICON_DIR"
 
-          # 用根目录下的 icon.png 生成所有必需尺寸
-          convert icon.png -resize 20x20   "$ICON_DIR/Icon-App-20x20@1x.png"
-          convert icon.png -resize 40x40   "$ICON_DIR/Icon-App-20x20@2x.png"
-          convert icon.png -resize 60x60   "$ICON_DIR/Icon-App-20x20@3x.png"
-          convert icon.png -resize 29x29   "$ICON_DIR/Icon-App-29x29@1x.png"
-          convert icon.png -resize 58x58   "$ICON_DIR/Icon-App-29x29@2x.png"
-          convert icon.png -resize 87x87   "$ICON_DIR/Icon-App-29x29@3x.png"
-          convert icon.png -resize 40x40   "$ICON_DIR/Icon-App-40x40@1x.png"
-          convert icon.png -resize 80x80   "$ICON_DIR/Icon-App-40x40@2x.png"
-          convert icon.png -resize 120x120 "$ICON_DIR/Icon-App-40x40@3x.png"
-          convert icon.png -resize 120x120 "$ICON_DIR/Icon-App-60x60@2x.png"
-          convert icon.png -resize 180x180 "$ICON_DIR/Icon-App-60x60@3x.png"
-          convert icon.png -resize 76x76   "$ICON_DIR/Icon-App-76x76@1x.png"
-          convert icon.png -resize 152x152 "$ICON_DIR/Icon-App-76x76@2x.png"
-          convert icon.png -resize 167x167 "$ICON_DIR/Icon-App-83.5x83.5@2x.png"
-          convert icon.png -resize 1024x1024 "$ICON_DIR/Icon-App-1024x1024@1x.png"
+          # sips 是 macOS 自带的图片处理工具，不会破坏 alpha 通道
+          sips -z 20 20 icon.png --out "$ICON_DIR/Icon-App-20x20@1x.png"
+          sips -z 40 40 icon.png --out "$ICON_DIR/Icon-App-20x20@2x.png"
+          sips -z 60 60 icon.png --out "$ICON_DIR/Icon-App-20x20@3x.png"
+          sips -z 29 29 icon.png --out "$ICON_DIR/Icon-App-29x29@1x.png"
+          sips -z 58 58 icon.png --out "$ICON_DIR/Icon-App-29x29@2x.png"
+          sips -z 87 87 icon.png --out "$ICON_DIR/Icon-App-29x29@3x.png"
+          sips -z 40 40 icon.png --out "$ICON_DIR/Icon-App-40x40@1x.png"
+          sips -z 80 80 icon.png --out "$ICON_DIR/Icon-App-40x40@2x.png"
+          sips -z 120 120 icon.png --out "$ICON_DIR/Icon-App-40x40@3x.png"
+          sips -z 120 120 icon.png --out "$ICON_DIR/Icon-App-60x60@2x.png"
+          sips -z 180 180 icon.png --out "$ICON_DIR/Icon-App-60x60@3x.png"
+          sips -z 76 76 icon.png --out "$ICON_DIR/Icon-App-76x76@1x.png"
+          sips -z 152 152 icon.png --out "$ICON_DIR/Icon-App-76x76@2x.png"
+          sips -z 167 167 icon.png --out "$ICON_DIR/Icon-App-83.5x83.5@2x.png"
+          sips -z 1024 1024 icon.png --out "$ICON_DIR/Icon-App-1024x1024@1x.png"
 
-          # 写入正确的 Contents.json（文件名与生成完全匹配）
+          # 写入正确的 Contents.json
           cat > "$ICON_DIR/Contents.json" << 'EOF'
           {
             "images" : [
