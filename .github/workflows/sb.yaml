@@ -207,7 +207,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ==================== iOS Simulator 构建（已修复部署目标） ====================
+  # ==================== iOS Simulator 构建（已修复图标替换） ====================
   build-ios-simulator:
     name: Build iOS Simulator app
     runs-on: macos-latest
@@ -254,7 +254,6 @@ jobs:
 
       - name: Fix iOS deployment target and install pods
         run: |
-          # 修改 Podfile 的平台版本
           if [ -f ios/App/Podfile ]; then
             sed -i '' "s/platform :ios, '[0-9.]*'/platform :ios, '15.0'/" ios/App/Podfile
           else
@@ -262,41 +261,43 @@ jobs:
             sed -i '' "s/# platform :ios, '[0-9.]*'/platform :ios, '15.0'/" Podfile
           fi
 
-          # ✅ 关键修复：修改 Xcode 项目文件中的 IPHONEOS_DEPLOYMENT_TARGET
-          # 将 14.0 或其他值改为 15.0，避免与 Capacitor 模块不匹配
           PROJECT_FILE="ios/App/App.xcodeproj/project.pbxproj"
           if [ -f "$PROJECT_FILE" ]; then
             sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = 14.0/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g' "$PROJECT_FILE"
-            # 如果已是 15.0 则不会改变
           fi
 
-          # 安装 CocoaPods（在 ios/App 目录内执行）
           cd ios/App && pod install --repo-update
 
+      # ✅ 彻底重建图标集，确保用上自定义图标
       - name: Generate iOS icons from icon.png
         run: |
           brew install imagemagick
 
           ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
-          rm -f $ICON_DIR/*.png
+          
+          # 删除整个旧图标集并重建目录
+          rm -rf "$ICON_DIR"
+          mkdir -p "$ICON_DIR"
 
-          convert icon.png -resize 20x20   $ICON_DIR/Icon-App-20x20@1x.png
-          convert icon.png -resize 40x40   $ICON_DIR/Icon-App-20x20@2x.png
-          convert icon.png -resize 60x60   $ICON_DIR/Icon-App-20x20@3x.png
-          convert icon.png -resize 29x29   $ICON_DIR/Icon-App-29x29@1x.png
-          convert icon.png -resize 58x58   $ICON_DIR/Icon-App-29x29@2x.png
-          convert icon.png -resize 87x87   $ICON_DIR/Icon-App-29x29@3x.png
-          convert icon.png -resize 40x40   $ICON_DIR/Icon-App-40x40@1x.png
-          convert icon.png -resize 80x80   $ICON_DIR/Icon-App-40x40@2x.png
-          convert icon.png -resize 120x120 $ICON_DIR/Icon-App-40x40@3x.png
-          convert icon.png -resize 120x120 $ICON_DIR/Icon-App-60x60@2x.png
-          convert icon.png -resize 180x180 $ICON_DIR/Icon-App-60x60@3x.png
-          convert icon.png -resize 76x76   $ICON_DIR/Icon-App-76x76@1x.png
-          convert icon.png -resize 152x152 $ICON_DIR/Icon-App-76x76@2x.png
-          convert icon.png -resize 167x167 $ICON_DIR/Icon-App-83.5x83.5@2x.png
-          convert icon.png -resize 1024x1024 $ICON_DIR/Icon-App-1024x1024@1x.png
+          # 用根目录下的 icon.png 生成所有必需尺寸
+          convert icon.png -resize 20x20   "$ICON_DIR/Icon-App-20x20@1x.png"
+          convert icon.png -resize 40x40   "$ICON_DIR/Icon-App-20x20@2x.png"
+          convert icon.png -resize 60x60   "$ICON_DIR/Icon-App-20x20@3x.png"
+          convert icon.png -resize 29x29   "$ICON_DIR/Icon-App-29x29@1x.png"
+          convert icon.png -resize 58x58   "$ICON_DIR/Icon-App-29x29@2x.png"
+          convert icon.png -resize 87x87   "$ICON_DIR/Icon-App-29x29@3x.png"
+          convert icon.png -resize 40x40   "$ICON_DIR/Icon-App-40x40@1x.png"
+          convert icon.png -resize 80x80   "$ICON_DIR/Icon-App-40x40@2x.png"
+          convert icon.png -resize 120x120 "$ICON_DIR/Icon-App-40x40@3x.png"
+          convert icon.png -resize 120x120 "$ICON_DIR/Icon-App-60x60@2x.png"
+          convert icon.png -resize 180x180 "$ICON_DIR/Icon-App-60x60@3x.png"
+          convert icon.png -resize 76x76   "$ICON_DIR/Icon-App-76x76@1x.png"
+          convert icon.png -resize 152x152 "$ICON_DIR/Icon-App-76x76@2x.png"
+          convert icon.png -resize 167x167 "$ICON_DIR/Icon-App-83.5x83.5@2x.png"
+          convert icon.png -resize 1024x1024 "$ICON_DIR/Icon-App-1024x1024@1x.png"
 
-          cat > $ICON_DIR/Contents.json << 'EOF'
+          # 写入正确的 Contents.json（文件名与生成完全匹配）
+          cat > "$ICON_DIR/Contents.json" << 'EOF'
           {
             "images" : [
               {"idiom" : "iphone","scale" : "1x","size" : "20x20","filename" : "Icon-App-20x20@1x.png"},
