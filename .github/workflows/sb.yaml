@@ -207,7 +207,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ==================== iOS Simulator 构建（无证书，统一图标与命名） ====================
+  # ==================== iOS Simulator 构建（修复部署目标） ====================
   build-ios-simulator:
     name: Build iOS Simulator app
     runs-on: macos-latest
@@ -248,9 +248,23 @@ jobs:
             npx cap init "AIChatUI" "com.jhcwcolin.aiui" --web-dir=www
           fi
           if [ ! -d ios ]; then
-            npx cap add ios
+            npx cap add ios || echo "Capacitor iOS add had warnings, continuing"
           fi
-          npx cap sync ios
+          # 仅复制 web 资源，不触发 pod install
+          npx cap copy ios
+
+      - name: Fix iOS deployment target and install pods
+        run: |
+          # 确保 Podfile 存在并提高部署目标到 14.0（满足 Capacitor 最新版要求）
+          if [ -f ios/App/Podfile ]; then
+            sed -i '' 's/^platform :ios, '\''[0-9.]*'\''/platform :ios, '\''14.0'\''/' ios/App/Podfile
+          else
+            # 极少数情况可能没有，手动生成 Podfile
+            cd ios/App && pod init
+            sed -i '' 's/^platform :ios, '\''[0-9.]*'\''/platform :ios, '\''14.0'\''/' Podfile
+          fi
+          # 安装 CocoaPods 依赖
+          cd ios/App && pod install --repo-update
 
       # 安装 ImageMagick 并生成多尺寸 iOS 图标，替换默认资源
       - name: Generate iOS icons from icon.png
@@ -264,8 +278,6 @@ jobs:
           rm -f $ICON_DIR/*.png
 
           # iOS 模拟器常用图标尺寸（单倍、2x、3x）以及 App Store 尺寸（用于占位）
-          # 这里生成所有必需的尺寸，即使模拟器构建主要用到 60x60 等
-          # 尺寸列表根据 iOS 标准
           convert icon.png -resize 20x20   $ICON_DIR/Icon-App-20x20@1x.png
           convert icon.png -resize 40x40   $ICON_DIR/Icon-App-20x20@2x.png
           convert icon.png -resize 60x60   $ICON_DIR/Icon-App-20x20@3x.png
@@ -282,7 +294,7 @@ jobs:
           convert icon.png -resize 167x167 $ICON_DIR/Icon-App-83.5x83.5@2x.png
           convert icon.png -resize 1024x1024 $ICON_DIR/Icon-App-1024x1024@1x.png
 
-          # 更新 Contents.json 以匹配新图标（使用通用 JSON）
+          # 更新 Contents.json 以匹配新图标
           cat > $ICON_DIR/Contents.json << 'EOF'
           {
             "images" : [
@@ -316,13 +328,6 @@ jobs:
           EOF
 
           echo "iOS icons generated."
-
-      - name: Install CocoaPods (if needed)
-        run: |
-          if ! command -v pod &> /dev/null; then
-            sudo gem install cocoapods
-          fi
-          cd ios/App && pod install --repo-update
 
       - name: Build iOS Simulator .app
         run: |
