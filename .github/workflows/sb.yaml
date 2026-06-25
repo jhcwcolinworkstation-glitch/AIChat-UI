@@ -207,7 +207,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ==================== iOS Simulator 构建（修复部署目标） ====================
+  # ==================== iOS Simulator 构建（已修复部署目标） ====================
   build-ios-simulator:
     name: Build iOS Simulator app
     runs-on: macos-latest
@@ -250,34 +250,30 @@ jobs:
           if [ ! -d ios ]; then
             npx cap add ios || echo "Capacitor iOS add had warnings, continuing"
           fi
-          # 仅复制 web 资源，不触发 pod install
           npx cap copy ios
 
       - name: Fix iOS deployment target and install pods
         run: |
-          # 确保 Podfile 存在并提高部署目标到 14.0（满足 Capacitor 最新版要求）
+          # 强制修改 Podfile 中的平台版本为 15.0（满足 Capacitor 最低要求）
           if [ -f ios/App/Podfile ]; then
-            sed -i '' 's/^platform :ios, '\''[0-9.]*'\''/platform :ios, '\''14.0'\''/' ios/App/Podfile
+            # 使用 sed 直接替换 platform 行
+            sed -i '' "s/platform :ios, '[0-9.]*'/platform :ios, '15.0'/" ios/App/Podfile
           else
-            # 极少数情况可能没有，手动生成 Podfile
+            # 极小概率 Podfile 不存在，手动生成并指定平台
             cd ios/App && pod init
-            sed -i '' 's/^platform :ios, '\''[0-9.]*'\''/platform :ios, '\''14.0'\''/' Podfile
+            sed -i '' "s/# platform :ios, '[0-9.]*'/platform :ios, '15.0'/" Podfile
           fi
           # 安装 CocoaPods 依赖
           cd ios/App && pod install --repo-update
 
-      # 安装 ImageMagick 并生成多尺寸 iOS 图标，替换默认资源
+      # 使用 ImageMagick 生成多尺寸 iOS 图标并替换默认资源
       - name: Generate iOS icons from icon.png
         run: |
           brew install imagemagick
 
-          # 目标 assets 目录
           ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
-
-          # 删除原有默认图标文件
           rm -f $ICON_DIR/*.png
 
-          # iOS 模拟器常用图标尺寸（单倍、2x、3x）以及 App Store 尺寸（用于占位）
           convert icon.png -resize 20x20   $ICON_DIR/Icon-App-20x20@1x.png
           convert icon.png -resize 40x40   $ICON_DIR/Icon-App-20x20@2x.png
           convert icon.png -resize 60x60   $ICON_DIR/Icon-App-20x20@3x.png
@@ -294,7 +290,6 @@ jobs:
           convert icon.png -resize 167x167 $ICON_DIR/Icon-App-83.5x83.5@2x.png
           convert icon.png -resize 1024x1024 $ICON_DIR/Icon-App-1024x1024@1x.png
 
-          # 更新 Contents.json 以匹配新图标
           cat > $ICON_DIR/Contents.json << 'EOF'
           {
             "images" : [
@@ -326,8 +321,6 @@ jobs:
             }
           }
           EOF
-
-          echo "iOS icons generated."
 
       - name: Build iOS Simulator .app
         run: |
